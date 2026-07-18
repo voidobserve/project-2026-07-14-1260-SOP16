@@ -1,0 +1,96 @@
+C51 COMPILER V9.60.7.0   POWER_ON                                                          07/18/2026 16:49:35 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE POWER_ON
+OBJECT MODULE PLACED IN .\Release\Objects\power_on.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE ..\..\User\power_on.c LARGE OPTIMIZE(9,SPEED) BROWSE INTVECTOR(0X000C) I
+                    -NCDIR(..\..\Libraries\Include;..\..\User) INTERVAL(3) DEBUG OBJECTEXTEND PRINT(.\Release\Listings\power_on.lst) OBJECT(.
+                    -\Release\Objects\power_on.obj)
+
+line level    source
+
+   1          #include "power_on.h"
+   2          #include "include.h"
+   3          #include "pwm.h"
+   4          #include "pwm_handle.h"
+   5           
+   6          
+   7          volatile bit flag_time_comes_during_power_on = 0; // 标志位，开机缓启动期间，调节时间到�
+             -�（由定时器置位）
+   8          
+   9          void power_on_handle(void)
+  10          {
+  11   1          static volatile u32 pwm0_power_on_step = 0;
+  12   1      static volatile u32 pwm1_power_on_step = 0;
+  13   1      
+  14   1          pwm_handle_param.cur_pwm_0_duty_val = 0;
+  15   1          pwm_handle_param.cur_pwm_1_duty_val = 0; 
+  16   1          pwm_handle_param.cur_mode = PWM_MODE_PWR_ON_ANIM;
+  17   1      
+  18   1          // TODO 如果开机期间，需要转到呼吸模式
+  19   1      
+  20   1          while (1)
+  21   1          {
+  22   2              if (pwm_handle_param.cur_pwm_0_duty_val >=
+  23   2                      PWM0_DEST_POWER_ON_DUTY_VAL &&
+  24   2                  pwm_handle_param.cur_pwm_1_duty_val >=
+  25   2                      PWM1_DEST_POWER_ON_DUTY_VAL)
+  26   2              {
+  27   3                  // 当两路pwm都到对应的占空比值之后，才退出开机缓启动
+  28   3                  break;
+  29   3              }
+  30   2      
+  31   2              if (flag_time_comes_during_power_on) // 如果调节时间到来
+  32   2              {
+  33   3                  flag_time_comes_during_power_on = 0;
+  34   3                  pwm0_power_on_step += PWM0_POWER_ON_ADJUST_STEP; // 累计步长
+  35   3                  if (pwm0_power_on_step >= 1000)
+  36   3                  {
+  37   4                      pwm0_power_on_step -= 1000;
+  38   4      
+  39   4                      if (pwm_handle_param.cur_pwm_0_duty_val < PWM0_DEST_POWER_ON_DUTY_VAL)
+  40   4                      {
+  41   5                          pwm_handle_param.cur_pwm_0_duty_val++;
+  42   5                      }
+  43   4                  }
+  44   3      
+  45   3                  pwm1_power_on_step += PWM1_POWER_ON_ADJUST_STEP;
+  46   3                  if (pwm1_power_on_step >= 1000)
+  47   3                  {
+  48   4                      pwm1_power_on_step -= 1000;
+  49   4      
+  50   4                      if (pwm_handle_param.cur_pwm_1_duty_val < PWM1_DEST_POWER_ON_DUTY_VAL)
+  51   4                      {
+  52   5                          pwm_handle_param.cur_pwm_1_duty_val++;
+C51 COMPILER V9.60.7.0   POWER_ON                                                          07/18/2026 16:49:35 PAGE 2   
+
+  53   5                      }
+  54   4                  }
+  55   3              }
+  56   2      
+  57   2              set_pwm_channel_0_duty(pwm_handle_param.cur_pwm_0_duty_val);
+  58   2              set_pwm_channel_1_duty(pwm_handle_param.cur_pwm_1_duty_val);
+  59   2          }
+  60   1      
+  61   1          // 缓启动后，立即更新pwm占空比对应的值：（ 要给下面这些变量赋值，上电�
+             -�会根据这些变量的值来调节 ）
+  62   1          pwm_handle_param.dest_pwm_0_duty_val = pwm_handle_param.cur_pwm_0_duty_val;
+  63   1          pwm_handle_param.dest_pwm_1_duty_val = pwm_handle_param.cur_pwm_1_duty_val;
+  64   1          pwm_handle_param.expect_pwm_0_duty_val = pwm_handle_param.cur_pwm_0_duty_val;
+  65   1          pwm_handle_param.expect_pwm_1_duty_val = pwm_handle_param.cur_pwm_1_duty_val;
+  66   1          pwm_handle_param.cur_mode = PWM_MODE_ON; // 设置为正常模式（表示退出了开机缓启动）
+  67   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    315    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      8    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

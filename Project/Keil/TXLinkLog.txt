@@ -1,0 +1,28 @@
+[07-18 16:01:08]Log start
+[07-18 16:01:08]Serial init start!
+[07-18 16:01:08]Set TXLink uart baud failed!
+[07-18 16:01:08]uart isd baud set api failed!
+[07-18 16:01:14]DllUv3Cap:0x2
+[07-18 16:01:14]DllUv3Cap:0x6d
+[07-18 16:01:14]DllUv3Cap:0x1
+[07-18 16:01:14]Serial init start!
+[07-18 16:01:14]TXLink ready failed!
+[07-18 16:01:14]TXLink ready failed!
+[07-18 16:01:14]TXLink ready failed!
+[07-18 16:01:14]TXLink ready failed!
+[07-18 16:01:14]TXLink ready failed!
+[07-18 16:01:14]TXLink ready failed!
+[07-18 16:01:14]TXLink ready failed!
+[07-18 16:01:15]TXLink ready failed!
+[07-18 16:01:15]TXLink ready failed!
+[07-18 16:01:15]Set TXLink uart baud failed!
+[07-18 16:01:15]Serial close ok!
+[07-18 16:01:15]uart isd baud set api failed!
+[07-18 16:01:50]Serial init start!
+[07-18 16:01:50]Serial close ok!
+[07-18 16:01:50]Serial init start!
+[07-18 16:01:50]uart_txm8c1200_set_driver:0x0
+[07-18 16:01:50]user uart set driver ok!
+[07-18 16:01:50]TXLink ready ok!
+[07-18 16:01:50]TXLink init ok!
+[07-18 16:01:50]Serial close ok!

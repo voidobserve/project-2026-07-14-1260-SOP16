@@ -1,0 +1,359 @@
+C51 COMPILER V9.60.7.0   UART0_HANDLE                                                      07/18/2026 15:00:14 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE UART0_HANDLE
+OBJECT MODULE PLACED IN .\Release\Objects\uart0_handle.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE ..\..\User\uart0_handle.c LARGE OPTIMIZE(9,SPEED) BROWSE INTVECTOR(0X000
+                    -C) INCDIR(..\..\Libraries\Include;..\..\User) INTERVAL(3) DEBUG OBJECTEXTEND PRINT(.\Release\Listings\uart0_handle.lst) 
+                    -OBJECT(.\Release\Objects\uart0_handle.obj)
+
+line level    source
+
+   1          #include "uart0_handle.h"
+   2          #include "user_config.h"
+   3          
+   4          #include "uart0.h"
+   5          
+   6          // 接收器
+   7          static volatile uart_receiver_t uart_receiver;
+   8          
+   9          /**
+  10           * @brief 重置接收器
+  11           * @note 在上电后、接收超时、接收出错、接收完成后调用
+  12           *
+  13           */
+  14          void uart_receiver_reset(void)
+  15          {
+  16   1              uart_receiver.index = 0;
+  17   1              uart_receiver.timeout_enable = 0;
+  18   1              uart_receiver.timeout_cnt = 0;
+  19   1              uart_receiver.status = UART_RECV_STATUS_IDLE;
+  20   1      }
+  21          
+  22          /**
+  23           * @brief 接收器超时使能时，累计超时时间，在定时器中断中调用
+  24           *
+  25           */
+  26          void uart_receiver_timeout_add(void)
+  27          {
+  28   1              if (uart_receiver.timeout_enable)
+  29   1              {
+  30   2                      if (uart_receiver.timeout_cnt < ((u16)-1))
+  31   2                      {
+  32   3                              uart_receiver.timeout_cnt++;
+  33   3                      }
+  34   2              }
+  35   1      }
+  36          
+  37          // 接收超时处理函数
+  38          void uart_receiver_timeout_handler(void)
+  39          {
+  40   1      #if USER_DEBUG_ENABLE
+  41   1              u8 i;
+  42   1      #endif
+  43   1      
+  44   1              if (uart_receiver.timeout_cnt >= UART_DATA_HANDLE_TIMEOUT)
+  45   1              {
+  46   2      #if USER_DEBUG_ENABLE
+  47   2                      printf("UART receive timeout, current status: %u\n", (u16)uart_receiver.status);
+  48   2      
+  49   2                      // 打印当前缓冲区内容
+  50   2                      printf("Buffer content: \n");
+  51   2                      for (i = 0; i < uart_receiver.index; i++)
+  52   2                      {
+  53   3                              printf("0x%02x ", (u16)uart_receiver.buffer[i]);
+C51 COMPILER V9.60.7.0   UART0_HANDLE                                                      07/18/2026 15:00:14 PAGE 2   
+
+  54   3                      }
+  55   2                      printf("\n");
+  56   2      #endif
+  57   2      
+  58   2                      // 重置接收器
+  59   2                      uart_receiver_reset();
+  60   2              }
+  61   1      }
+  62          
+  63          /**
+  64           * @brief 接收器处理当前接收到的1字节数据
+  65           *
+  66           */
+  67          u8 uart_receiver_process_byte(u8 byte)
+  68          {
+  69   1              u8 ret = 1; // 0: 处理成功，1: 处理失败
+  70   1      
+  71   1              // printf("uart_receiver.status == %u\n", (u16)uart_receiver.status);
+  72   1              // printf("byte == 0x%02x\n", (u16)byte);
+  73   1      
+  74   1              switch (uart_receiver.status)
+  75   1              {
+  76   2              case UART_RECV_STATUS_IDLE:
+  77   2                      if (UART_DATA_HANDLE_FORMAT_FIX_VAL_0 == byte)
+  78   2                      {
+  79   3                              ret = 0;
+  80   3                              uart_receiver.status++;
+  81   3                      }
+  82   2                      break;
+  83   2      
+  84   2              case UART_RECV_STATUS_FORMAT_HEAD_0:
+  85   2                      if (UART_DATA_HANDLE_FORMAT_FIX_VAL_1 == byte)
+  86   2                      {
+  87   3                              ret = 0;
+  88   3                              uart_receiver.status++;
+  89   3                      }
+  90   2                      break;
+  91   2      
+  92   2              case UART_RECV_STATUS_FORMAT_HEAD_1:
+  93   2                      if (UART_DATA_HANDLE_FORMAT_FIX_VAL_2 == byte)
+  94   2                      {
+  95   3                              ret = 0;
+  96   3                              uart_receiver.status++;
+  97   3                      }
+  98   2                      break;
+  99   2      
+ 100   2              case UART_RECV_STATUS_FORMAT_HEAD_2:
+ 101   2                      if (UART_DATA_HANDLE_FORMAT_FIX_VAL_3 == byte)
+ 102   2                      {
+ 103   3                              ret = 0;
+ 104   3                              uart_receiver.status++;
+ 105   3                      }
+ 106   2                      break;
+ 107   2      
+ 108   2              case UART_RECV_STATUS_FORMAT_HEAD_3:
+ 109   2                      // 接收完所有格式头，现在接收控制命令
+ 110   2      
+ 111   2                      switch (byte)
+ 112   2                      {
+ 113   3                      case UART_CMD_DEV_ON:
+ 114   3                              uart_receiver.recv_len = 0;
+ 115   3                              uart_receiver.expect_recv_len = 4; // 接下来还需要接收的数据长度
+C51 COMPILER V9.60.7.0   UART0_HANDLE                                                      07/18/2026 15:00:14 PAGE 3   
+
+ 116   3                              ret = 0;
+ 117   3                              uart_receiver.status++;
+ 118   3                              break;
+ 119   3                      case UART_CMD_DEV_OFF:
+ 120   3                              uart_receiver.recv_len = 0;
+ 121   3                              uart_receiver.expect_recv_len = 3; // 接下来还需要接收的数据长度
+ 122   3                              ret = 0;
+ 123   3                              uart_receiver.status++;
+ 124   3                              break;
+ 125   3                      case UART_CMD_PAIR:
+ 126   3                              uart_receiver.recv_len = 0;
+ 127   3                              uart_receiver.expect_recv_len = 4; // 接下来还需要接收的数据长度
+ 128   3                              ret = 0;
+ 129   3                              uart_receiver.status++;
+ 130   3                              break;
+ 131   3                      case UART_CMD_CANCEL_PAIRING:
+ 132   3                              uart_receiver.recv_len = 0;
+ 133   3                              uart_receiver.expect_recv_len = 4; // 接下来还需要接收的数据长度
+ 134   3                              ret = 0;
+ 135   3                              uart_receiver.status++;
+ 136   3                              break;
+ 137   3                      case UART_CMD_SET_COLOR:
+ 138   3                              uart_receiver.recv_len = 0;
+ 139   3                              uart_receiver.expect_recv_len = 6; // 接下来还需要接收的数据长度
+ 140   3                              ret = 0;
+ 141   3                              uart_receiver.status++;
+ 142   3                              break;
+ 143   3                      case UART_CMD_SET_BRIGHTNESS_LEV:
+ 144   3                              uart_receiver.recv_len = 0;
+ 145   3                              uart_receiver.expect_recv_len = 5; // 接下来还需要接收的数据长度
+ 146   3                              ret = 0;
+ 147   3                              uart_receiver.status++;
+ 148   3                              break;
+ 149   3      
+ 150   3                      default:
+ 151   3                              break;
+ 152   3                      }
+ 153   2      
+ 154   2                      break;
+ 155   2      
+ 156   2              case UART_RECV_STATUS_CMD:
+ 157   2                      // 接收完控制命令，现在接收数据
+ 158   2                      ret = 0; // 接收数据时不关心是否成功
+ 159   2                      uart_receiver.recv_len++;
+ 160   2      
+ 161   2                      if (uart_receiver.recv_len >=
+ 162   2                              uart_receiver.expect_recv_len)
+ 163   2                      {
+ 164   3                              uart_receiver.status++;
+ 165   3                      }
+ 166   2      
+ 167   2      #if USER_DEBUG_ENABLE
+ 168   2                      // printf("uart_receiver.recv_len == %u\n",
+ 169   2                      //         (u16)uart_receiver.recv_len);
+ 170   2                      // printf("uart_receiver.expect_recv_len == %u\n",
+ 171   2                      //         (u16)uart_receiver.expect_recv_len);
+ 172   2      #endif
+ 173   2                      break;
+ 174   2      
+ 175   2              default:
+ 176   2      #if USER_DEBUG_ENABLE
+ 177   2                      printf("recv sta err\n");
+C51 COMPILER V9.60.7.0   UART0_HANDLE                                                      07/18/2026 15:00:14 PAGE 4   
+
+ 178   2      #endif
+ 179   2                      break;
+ 180   2              }
+ 181   1      
+ 182   1              if (0 == ret)
+ 183   1              {
+ 184   2                      uart_receiver.buffer[uart_receiver.index] = byte;
+ 185   2                      uart_receiver.index++;
+ 186   2              }
+ 187   1      
+ 188   1              return ret;
+ 189   1      }
+ 190          
+ 191          void uart_handle(void)
+ 192          {
+ 193   1              u8 recv_byte;
+ 194   1              u8 ret;
+ 195   1      #if USER_DEBUG_ENABLE
+ 196   1              u8 i;
+ 197   1      #endif
+ 198   1      
+ 199   1              // 检查是否接收超时
+ 200   1              if (uart_receiver.timeout_enable)
+ 201   1              {
+ 202   2                      uart_receiver_timeout_handler();
+ 203   2              }
+ 204   1      
+ 205   1              // 处理接收缓冲区中的数据
+ 206   1              while (1)
+ 207   1              {
+ 208   2                      if (0 == uart0_rxbuffer_get_count() ||
+ 209   2                              uart_receiver.status == UART_RECV_STATUS_DATA)
+ 210   2                      {
+ 211   3                              // 缓冲区为空或者接收完成，退出循环
+ 212   3      
+ 213   3      #if USER_DEBUG_ENABLE
+ 214   3      #if 0
+                                      if (0 == uart0_rxbuffer_get_count() &&
+                                              uart_receiver.status != UART_RECV_STATUS_DATA)
+                                      {
+                                              printf("0 == uart0_rxbuffer_get_count()\n");
+                                      }
+              
+                                      if (uart_receiver.status == UART_RECV_STATUS_DATA)
+                                      {
+                                              printf("recv complete \n");
+                                      }
+              #endif
+ 226   3      #endif
+ 227   3                              break;
+ 228   3                      }
+ 229   2      
+ 230   2                      recv_byte = uart0_rxbuffer_get_byte();
+ 231   2      
+ 232   2                      // 启用超时计数
+ 233   2                      uart_receiver.timeout_enable = 1;
+ 234   2                      uart_receiver.timeout_cnt = 0;
+ 235   2      
+ 236   2                      // 处理字节
+ 237   2                      ret = uart_receiver_process_byte(recv_byte);
+ 238   2                      if (ret)
+ 239   2                      {
+C51 COMPILER V9.60.7.0   UART0_HANDLE                                                      07/18/2026 15:00:14 PAGE 5   
+
+ 240   3      #if USER_DEBUG_ENABLE
+ 241   3                              // 处理失败
+ 242   3                              // 如果连格式头都没有接收，不打印错误信息
+ 243   3                              if (uart_receiver.status != 0)
+ 244   3                              {
+ 245   4                                      printf("Byte processing failed\n");
+ 246   4                                      printf("cur uart receiver status: %02d\n", (u16)uart_receiver.status);
+ 247   4                              }
+ 248   3      #endif
+ 249   3                              uart_receiver_reset();
+ 250   3                      }
+ 251   2              }
+ 252   1      
+ 253   1              if (uart_receiver.status != UART_RECV_STATUS_DATA)
+ 254   1              {
+ 255   2                      // 接收未完成，函数直接返回
+ 256   2                      return;
+ 257   2              }
+ 258   1      
+ 259   1              // ===========================================================
+ 260   1              // ===========================================================
+ 261   1              // 接收完成，处理数据
+ 262   1      
+ 263   1      #if USER_DEBUG_ENABLE
+ 264   1      #if 0
+                      // 打印接收到的一帧数据
+                      printf("================================>\n");
+                      printf("Received complete frame: \n");
+                      for (i = 0; i < uart_receiver.index; i++)
+                      {
+                              printf("0x%02x ", (u16)uart_receiver.buffer[i]);
+                      }
+                      printf("\n");
+                      printf("================================^\n");
+              #endif
+ 275   1      #endif
+ 276   1      
+ 277   1              // 根据接收到的指令，执行对应的操作
+ 278   1              switch (uart_receiver.buffer[4])
+ 279   1              {
+ 280   2              case UART_CMD_DEV_ON:
+ 281   2      // 开启设备
+ 282   2      #if USER_DEBUG_ENABLE
+ 283   2                      printf("recv cmd: dev on\n");
+ 284   2      #endif
+ 285   2                      break;
+ 286   2              case UART_CMD_DEV_OFF:
+ 287   2      // 关闭设备
+ 288   2      #if USER_DEBUG_ENABLE
+ 289   2                      printf("recv cmd: dev off\n");
+ 290   2      #endif
+ 291   2                      break;
+ 292   2              case UART_CMD_PAIR:
+ 293   2      // 开始配对
+ 294   2      #if USER_DEBUG_ENABLE
+ 295   2                      printf("recv cmd: pair\n");
+ 296   2      #endif
+ 297   2                      break;
+ 298   2              case UART_CMD_CANCEL_PAIRING:
+ 299   2                      // 取消配对
+ 300   2      #if USER_DEBUG_ENABLE
+ 301   2                      printf("recv cmd: cancel pairing\n");
+C51 COMPILER V9.60.7.0   UART0_HANDLE                                                      07/18/2026 15:00:14 PAGE 6   
+
+ 302   2      #endif
+ 303   2                      break;
+ 304   2              case UART_CMD_SET_COLOR:
+ 305   2                      // 设置颜色（颜色、色温）
+ 306   2      #if USER_DEBUG_ENABLE
+ 307   2                      printf("recv cmd: set color\n");
+ 308   2      #endif
+ 309   2                      break;
+ 310   2              case UART_CMD_SET_BRIGHTNESS_LEV:
+ 311   2                      // 设置亮度等级
+ 312   2      #if USER_DEBUG_ENABLE
+ 313   2                      printf("recv cmd: set brightness lev\n");
+ 314   2      #endif
+ 315   2                      break;
+ 316   2      
+ 317   2              default:
+ 318   2                      break;
+ 319   2              }
+ 320   1      
+ 321   1              // 重置接收器，准备下一次接收
+ 322   1              uart_receiver_reset();
+ 323   1      }
+*** WARNING C280 IN LINE 196 OF ..\..\User\uart0_handle.c: 'i': unreferenced local variable
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    599    ----
+   CONSTANT SIZE    =    270    ----
+   XDATA SIZE       =     27       5
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

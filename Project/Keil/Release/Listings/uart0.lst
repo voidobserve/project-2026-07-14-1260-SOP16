@@ -1,0 +1,160 @@
+C51 COMPILER V9.60.7.0   UART0                                                             07/18/2026 15:00:14 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE UART0
+OBJECT MODULE PLACED IN .\Release\Objects\uart0.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE ..\..\User\uart0.c LARGE OPTIMIZE(9,SPEED) BROWSE INTVECTOR(0X000C) INCD
+                    -IR(..\..\Libraries\Include;..\..\User) INTERVAL(3) DEBUG OBJECTEXTEND PRINT(.\Release\Listings\uart0.lst) OBJECT(.\Relea
+                    -se\Objects\uart0.obj)
+
+line level    source
+
+   1          #include "uart0.h"
+   2          #include "include.h"
+   3          
+   4          #include "user_config.h"
+   5          
+   6          volatile uart_rx_buffer_t uart0_rx_buffer = {0};
+   7          
+   8          #if USER_DEBUG_ENABLE
+   9          
+  10          // 重写puchar()函数
+  11          char putchar(char c)
+  12          {
+  13   1          while (!(UART0_STA & UART_TX_DONE(0x01)))
+  14   1              ;
+  15   1          UART0_DATA = c;
+  16   1          return c;
+  17   1      }
+  18          #endif
+  19          
+  20          void uart0_config(void)
+  21          {
+  22   1      #if USER_DEBUG_ENABLE
+  23   1          // 发送脚 ， 只在调试时使用
+  24   1          P0_MD0 &= ~(GPIO_P00_MODE_SEL(0x3));
+  25   1          P0_MD0 |= GPIO_P00_MODE_SEL(0x1); // 配置为输出模式
+  26   1          FOUT_S00 |= GPIO_FOUT_UART0_TX;   // 配置为 UART0_TX
+  27   1      #endif
+  28   1      
+  29   1      #if (!USER_DEBUG_PIN_ENABLE)
+                  // 接收脚
+                  // 可能是模块的信号拉低能力优先，这里不能开上拉，否则容易解错码
+                  // P0_PU |= GPIO_P03_PULL_UP(0x01);      // 上拉
+                  P0_MD0 &= ~(GPIO_P03_MODE_SEL(0x03)); // 输入模式
+                  FIN_S7 = GPIO_FIN_SEL_P03;            // 选择 uart0 rx 对应的引脚
+              #else
+  36   1          // 接收脚
+  37   1          // 可能是模块的信号拉低能力优先，这里不能开上拉，否则容易解错码
+  38   1          // P2_PU |= GPIO_P25_PULL_UP(0x01);      // 上拉
+  39   1          P2_MD1 &= ~(GPIO_P25_MODE_SEL(0x03)); // 输入模式
+  40   1          FIN_S7 = GPIO_FIN_SEL_P25;            // 选择 uart0 rx 对应的引脚
+  41   1      #endif
+  42   1      
+  43   1          UART0_BAUD1 = (USER_UART0_BAUD >> 8) & 0xFF; // 配置波特率高八位
+  44   1          UART0_BAUD0 = USER_UART0_BAUD & 0xFF;        // 配置波特率低八位
+  45   1      
+  46   1          UART0_CON0 = UART_STOP_BIT(0x0) |
+  47   1                       UART_RX_IRQ_EN(0x01) |
+  48   1                       UART_EN(0x1); // 8bit数据，1bit停止位
+  49   1      
+  50   1          // __SetIRQnIP(UART0_IRQn, 1); // 设置中断优先级，数值越大，优先级越高
+  51   1          __EnableIRQ(UART0_IRQn);    // 打开模块中断
+  52   1          IE_EA = 1;                  // 打开总中断
+  53   1      }
+C51 COMPILER V9.60.7.0   UART0                                                             07/18/2026 15:00:14 PAGE 2   
+
+  54          
+  55          // 获取接收缓冲区中有效的数据个数，单位：字节Byte
+  56          u16 uart0_rxbuffer_get_count(void)
+  57          {
+  58   1          return uart0_rx_buffer.count;
+  59   1      }
+  60          
+  61          // 从接收缓冲区中取出一个字节数据
+  62          u8 uart0_rxbuffer_get_byte(void)
+  63          {
+  64   1          u8 rxbyte;
+  65   1      
+  66   1          if (0 == uart0_rx_buffer.count)
+  67   1          {
+  68   2              // 缓冲区空
+  69   2              return 0;
+  70   2          }
+  71   1      
+  72   1          // 先偏移索引，再取出数据
+  73   1          // uart0_rx_buffer.tail = (uart0_rx_buffer.tail + 1) % UART_RX_BUF_SIZE;
+  74   1          // rxbyte = uart0_rx_buffer.buffer[uart0_rx_buffer.tail];
+  75   1      
+  76   1          uart0_rx_buffer.tail++;
+  77   1          if (uart0_rx_buffer.tail >= UART_RX_BUF_SIZE)
+  78   1          {
+  79   2              uart0_rx_buffer.tail = 0;
+  80   2          }
+  81   1          rxbyte = uart0_rx_buffer.buffer[uart0_rx_buffer.tail];
+  82   1      
+  83   1          uart0_rx_buffer.count--;
+  84   1      
+  85   1          return rxbyte;
+  86   1      }
+  87          
+  88          /**
+  89           * @brief 向UART0接收缓冲区中存入一个字节数据
+  90           * @note 当缓冲区满时会覆盖旧的数据
+  91           * @param byte 要存入的字节数据
+  92           */
+  93          static void uart0_rxbuffer_put_byte(u8 byte)
+  94          {
+  95   1          // 目前的逻辑：缓冲区满，覆盖旧的数据
+  96   1      
+  97   1          // 先偏移索引，再存放数据
+  98   1          // uart0_rx_buffer.head = (uart0_rx_buffer.head + 1) % UART_RX_BUF_SIZE;
+  99   1          // uart0_rx_buffer.buffer[uart0_rx_buffer.head] = byte;
+ 100   1      
+ 101   1          uart0_rx_buffer.head++;
+ 102   1          if (uart0_rx_buffer.head >= UART_RX_BUF_SIZE)
+ 103   1          {
+ 104   2              uart0_rx_buffer.head = 0;
+ 105   2          }
+ 106   1          uart0_rx_buffer.buffer[uart0_rx_buffer.head] = byte;
+ 107   1      
+ 108   1          uart0_rx_buffer.count++;
+ 109   1          if (uart0_rx_buffer.count > UART_RX_BUF_SIZE)
+ 110   1          {
+ 111   2              uart0_rx_buffer.count = UART_RX_BUF_SIZE;
+ 112   2          }
+ 113   1      }
+ 114          
+ 115          // UART0中断服务函数（接收中断）
+C51 COMPILER V9.60.7.0   UART0                                                             07/18/2026 15:00:14 PAGE 3   
+
+ 116          void UART0_IRQHandler(void) interrupt UART0_IRQn
+ 117          {
+ 118   1          // 进入中断设置IP，不可删除
+ 119   1          __IRQnIPnPush(UART0_IRQn);
+ 120   1          // ---------------- 用户函数处理 -------------------
+ 121   1          // RX接收完成中断
+ 122   1          if (UART0_STA & UART_RX_DONE(0x1))
+ 123   1          {
+ 124   2              u8 recv_byte = UART0_DATA;
+ 125   2              uart0_rxbuffer_put_byte(recv_byte);
+ 126   2      
+ 127   2              // printf("%02x\n", (u16)recv_byte);
+ 128   2          }
+ 129   1          // 退出中断设置IP，不可删除
+ 130   1          __IRQnIPnPop(UART0_IRQn);
+ 131   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    270    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =    134       1
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

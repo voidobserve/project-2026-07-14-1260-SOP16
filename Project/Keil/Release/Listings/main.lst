@@ -1,0 +1,140 @@
+C51 COMPILER V9.60.7.0   MAIN                                                              07/18/2026 16:49:35 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Release\Objects\main.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE ..\..\User\main.c LARGE OPTIMIZE(9,SPEED) BROWSE INTVECTOR(0X000C) INCDI
+                    -R(..\..\Libraries\Include;..\..\User) INTERVAL(3) DEBUG OBJECTEXTEND PRINT(.\Release\Listings\main.lst) OBJECT(.\Release
+                    -\Objects\main.obj)
+
+line level    source
+
+   1          /**
+   2           ******************************************************************************
+   3           * @file    main.c
+   4           * @author  HUGE-IC Application Team
+   5           * @version V1.0.0
+   6           * @date    02-09-2022
+   7           * @brief   Main program body
+   8           ******************************************************************************
+   9           * @attention
+  10           *
+  11           * <h2><center>&copy; COPYRIGHT 2021 HUGE-IC</center></h2>
+  12           *
+  13           * 版权说明后续补上
+  14           *
+  15           ******************************************************************************
+  16           */
+  17          
+  18          /* Includes ------------------------------------------------------------------*/
+  19          #include "user_include.h"
+  20          #include "user_config.h"
+  21          #include "include.h"
+  22          
+  23          #include <stdio.h>
+  24          #include "uart0.h"
+  25          
+  26          #include "uart0_handle.h"
+  27          #include "power_on.h"
+  28          #include "pwm_handle.h"
+  29          
+  30          
+  31          void main(void)
+  32          {
+  33   1          // 看门狗默认打开, 复位时间2s
+  34   1          WDT_KEY = WDT_KEY_VAL(0xDD); // 关闭看门狗 (如需配置看门狗请查看“WDT\WDT_Reset”示�
+             -��)
+  35   1      
+  36   1          system_init();
+  37   1      
+  38   1          // 关闭HCK和HDA的调试功能
+  39   1          WDT_KEY = 0x55;  // 解除写保护
+  40   1          IO_MAP &= ~0x01; // 清除这个寄存器的值，实现关闭HCK和HDA引脚的调试功能（解除�
+             -��射）
+  41   1          WDT_KEY = 0xBB;  // 写一个无效的数据，触发写保护
+  42   1      
+  43   1          uart0_config();
+  44   1          uart_receiver_reset();
+  45   1      
+  46   1      #if USER_DEBUG_ENABLE
+  47   1      
+  48   1          printf("sys reset\n");
+  49   1      
+  50   1          // 配置为输出模式，在逻辑分析仪上看IO翻转
+  51   1          P2_MD1 &= ~(GPIO_P26_MODE_SEL(0x3));
+C51 COMPILER V9.60.7.0   MAIN                                                              07/18/2026 16:49:35 PAGE 2   
+
+  52   1          P2_MD1 |= GPIO_P26_MODE_SEL(0x01); // 输出模式
+  53   1          FOUT_S26 = GPIO_FOUT_AF_FUNC;
+  54   1      #endif
+  55   1      
+  56   1          adc_pin_config(); // 配置使用到adc的引脚
+  57   1          adc_config();
+  58   1      
+  59   1          tmr0_config(); //
+  60   1          pwm_init();    // 配置pwm输出的引脚
+  61   1      
+  62   1          timer2_config();
+  63   1          timer3_config(); // 要等adc完成初始化，再调用timer3的初始化
+  64   1      
+  65   1          // rf_recv_init(); // rf功能初始化
+  66   1          fan_ctl_config();
+  67   1      
+  68   1          P1_MD1 &= ~GPIO_P14_MODE_SEL(0x03); // P14 16脚
+  69   1          P1_MD1 |= GPIO_P14_MODE_SEL(0x01);
+  70   1          FOUT_S14 = GPIO_FOUT_AF_FUNC; // AF功能输出
+  71   1          P14 = 0;                      //
+  72   1      
+  73   1          // limited_max_pwm_duty = MAX_PWM_DUTY;
+  74   1          limited_pwm_duty_due_to_fan_err = MAX_PWM_DUTY;
+  75   1          limited_pwm_duty_due_to_temp = MAX_PWM_DUTY;
+  76   1          limited_pwm_duty_due_to_unstable_engine = MAX_PWM_DUTY;
+  77   1      
+  78   1          pwm_handle_param_init();
+  79   1          // pwm_mode = PWM_MODE_COLOR_CYAN;                 // 开机缓启动之后，默认的模式
+  80   1          // pwm_brightness_lev = PWM_MODE_BRIGHTNESS_LEV_6; // REVIEW 要注意是最大亮度
+  81   1          power_on_handle(); // TEST_ONLY 在测试时屏蔽
+  82   1      
+  83   1          while (1)
+  84   1          {
+  85   2      #if 1
+  86   2              temperature_scan(); // 检测热敏电阻一端的电压值
+  87   2              fan_scan();         // 检测风扇的状态是否异常，并根据结果来限制pwm占空比
+  88   2              set_duty();         // 设定到要调节到的脉宽 (设置adjust_duty)
+  89   2      
+  90   2              // 如果 expect_adjust_pwm_channel_x_duty 有变化，可以在这里修改 adjust_pwm_channel_x_
+             -duty
+  91   2              pwm_handle_param.dest_pwm_0_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_0
+             -_duty_val);
+  92   2              pwm_handle_param.dest_pwm_1_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_1
+             -_duty_val);
+  93   2      
+  94   2              uart_handle(); // 处理串口接收到的数据
+  95   2      
+  96   2              // 风扇控制：
+  97   2              // fan_ctl(); // 没有了线控调光，这里目前用不上，没有关灯的功能
+  98   2      #endif
+  99   2          }
+ 100   1      }
+ 101          
+ 102          /**
+ 103           * @}
+ 104           */
+ 105          
+ 106          /*************************** (C) COPYRIGHT 2022 HUGE-IC ***** END OF FILE *****/
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    171    ----
+C51 COMPILER V9.60.7.0   MAIN                                                              07/18/2026 16:49:35 PAGE 3   
+
+   CONSTANT SIZE    =     11    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
