@@ -16,6 +16,10 @@ void power_on_handle(void)
     pwm_handle_param.cur_pwm_1_duty_val = 0;
     pwm_handle_param.cur_mode = PWM_MODE_PWR_ON_ANIM;
 
+    // 这里要先设置 dest_pwm_x_duty_val，如果在缓启动期间进入呼吸灯动画，要根据这个值来调节
+    pwm_handle_param.dest_pwm_0_duty_val = PWM0_DEST_POWER_ON_DUTY_VAL;
+    pwm_handle_param.dest_pwm_1_duty_val = PWM1_DEST_POWER_ON_DUTY_VAL;
+
     while (1)
     {
         if (pwm_handle_param.cur_pwm_0_duty_val >=
@@ -58,13 +62,18 @@ void power_on_handle(void)
 
         // TODO 如果开机期间，需要转到呼吸模式
         // TODO 开机缓启动期间，只处理 配对 和 取消配对这两种情况
-        uart0_handle();
+
+        // TODO 如果从呼吸动画退出，到了缓启动期间，cur_pwm_x_duty_val 的值应该是确定值
+        // uart_handle();
     }
 
+    // REVIEW 缓启动后，需要确认 pwm_handle_param 中的各项参数是否正确
     // 缓启动后，立即更新pwm占空比对应的值：（ 要给下面这些变量赋值，上电后会根据这些变量的值来调节 ）
-    pwm_handle_param.dest_pwm_0_duty_val = pwm_handle_param.cur_pwm_0_duty_val;
-    pwm_handle_param.dest_pwm_1_duty_val = pwm_handle_param.cur_pwm_1_duty_val;
+
     pwm_handle_param.expect_pwm_0_duty_val = pwm_handle_param.cur_pwm_0_duty_val;
     pwm_handle_param.expect_pwm_1_duty_val = pwm_handle_param.cur_pwm_1_duty_val;
-    pwm_handle_param.cur_mode = PWM_MODE_ON; // 设置为正常模式（表示退出了开机缓启动）
+    pwm_handle_param.cur_mode = PWM_MODE_NORMAL_WORK; // 设置为正常模式（表示退出了开机缓启动）
+    // pwm_handle_param.dest_mode = PWM_MODE_NORMAL_WORK;
+    pwm_handle_param.color_idx = PWM_COLOR_IDX_CYAN;
+    pwm_handle_param.brightness_lev = PWM_BRIGHTNESS_LEV_MAX;
 }

@@ -21,24 +21,43 @@ Target DLL:      TXLink_keil_C51.dll V1.00
 Dialog DLL:      TP51.DLL V2.60.1.0
  
 <h2>Project:</h2>
-D:\project\2026-07-14-北陀-BT-MB01-1260-SOP16\code\临时用1260demo板来测试，只做串口通信和控制功能\Project\Keil\Project.uvproj
+D:\project\2026-07-14-北陀-BT-MB01-1260-SOP16\code\project-2026-07-14-1260-SOP16\Project\Keil\Project.uvproj
 Project File Date:  07/18/2026
 
 <h2>Output:</h2>
 Build target 'Target 1'
 compiling main.c...
 compiling pwm.c...
-compiling time0.c...
 compiling timer2.c...
 compiling fan_ctl.c...
 compiling power_on.c...
+compiling uart0_handle.c...
+..\..\User\uart0_handle.c(420): warning C280: 'i': unreferenced local variable
 compiling pwm_handle.c...
-..\..\User\pwm_handle.c(22): warning C280: 'pwm_idx': unreferenced local variable
-..\..\User\pwm_handle.c(22): warning C280: 'pwm_duty_val': unreferenced local variable
-..\..\User\pwm_handle.c(31): warning C280: 'pwm_duty_val': unreferenced local variable
-..\..\User\pwm_handle.c(35): warning C280: 'mode': unreferenced local variable
-..\..\User\pwm_handle.c(166): error C204: 'pwm_mode': undefined member
-Target not created.
+linking...
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?GET_PWM_CHANNEL_0_STATUS?PWM
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?GET_PWM_CHANNEL_1_STATUS?PWM
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?PWM_CHANNEL_0_ENABLE?PWM
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?PWM_CHANNEL_0_DISABLE?PWM
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?PWM_CHANNEL_1_ENABLE?PWM
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?PWM_CHANNEL_1_DISABLE?PWM
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?TEMPERATURE_SCAN?ADC
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?SET_DUTY?ADC
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?FAN_SCAN?ADC
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?FAN_CTL?FAN_CTL
+Program Size: data=16.0 xdata=940 code=8627
+creating hex file from ".\Release\Objects\Demo"...
+".\Release\Objects\Demo" - 0 Error(s), 11 Warning(s).
 Build Time Elapsed:  00:00:01
 </pre>
 </body>

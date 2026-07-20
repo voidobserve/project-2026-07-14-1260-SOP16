@@ -2,6 +2,7 @@
 #include "user_config.h"
 
 #include "uart0.h"
+#include "pwm_handle.h"
 
 // 接收器
 static volatile uart_receiver_t uart_receiver;
@@ -14,9 +15,13 @@ static volatile uart_receiver_t uart_receiver;
 void uart_receiver_reset(void)
 {
 	uart_receiver.index = 0;
+	uart_receiver.recv_len = 0;
+	uart_receiver.expect_recv_len = 0;
+
+	uart_receiver.status = UART_RECV_STATUS_IDLE;
+
 	uart_receiver.timeout_enable = 0;
 	uart_receiver.timeout_cnt = 0;
-	uart_receiver.status = UART_RECV_STATUS_IDLE;
 }
 
 /**
@@ -67,9 +72,8 @@ void uart_receiver_timeout_handler(void)
 u8 uart_receiver_process_byte(u8 byte)
 {
 	u8 ret = 1; // 0: 处理成功，1: 处理失败
-
-	// printf("uart_receiver.status == %u\n", (u16)uart_receiver.status);
-	// printf("byte == 0x%02x\n", (u16)byte);
+	volatile u8 i;
+	volatile u8 check_val = 0; // 校验值
 
 	switch (uart_receiver.status)
 	{
@@ -78,6 +82,7 @@ u8 uart_receiver_process_byte(u8 byte)
 		{
 			ret = 0;
 			uart_receiver.status++;
+			uart_receiver.recv_len++;
 		}
 		break;
 
@@ -86,6 +91,7 @@ u8 uart_receiver_process_byte(u8 byte)
 		{
 			ret = 0;
 			uart_receiver.status++;
+			uart_receiver.recv_len++;
 		}
 		break;
 
@@ -94,6 +100,7 @@ u8 uart_receiver_process_byte(u8 byte)
 		{
 			ret = 0;
 			uart_receiver.status++;
+			uart_receiver.recv_len++;
 		}
 		break;
 
@@ -102,6 +109,7 @@ u8 uart_receiver_process_byte(u8 byte)
 		{
 			ret = 0;
 			uart_receiver.status++;
+			uart_receiver.recv_len++;
 		}
 		break;
 
@@ -111,38 +119,38 @@ u8 uart_receiver_process_byte(u8 byte)
 		switch (byte)
 		{
 		case UART_CMD_DEV_ON:
-			uart_receiver.recv_len = 0;
-			uart_receiver.expect_recv_len = 4; // 接下来还需要接收的数据长度
+			uart_receiver.recv_len++;
+			uart_receiver.expect_recv_len = 4 + 5;
 			ret = 0;
 			uart_receiver.status++;
 			break;
 		case UART_CMD_DEV_OFF:
-			uart_receiver.recv_len = 0;
-			uart_receiver.expect_recv_len = 3; // 接下来还需要接收的数据长度
+			uart_receiver.recv_len++;
+			uart_receiver.expect_recv_len = 3 + 5;
 			ret = 0;
 			uart_receiver.status++;
 			break;
 		case UART_CMD_PAIR:
-			uart_receiver.recv_len = 0;
-			uart_receiver.expect_recv_len = 4; // 接下来还需要接收的数据长度
+			uart_receiver.recv_len++;
+			uart_receiver.expect_recv_len = 4 + 5;
 			ret = 0;
 			uart_receiver.status++;
 			break;
 		case UART_CMD_CANCEL_PAIRING:
-			uart_receiver.recv_len = 0;
-			uart_receiver.expect_recv_len = 4; // 接下来还需要接收的数据长度
+			uart_receiver.recv_len++;
+			uart_receiver.expect_recv_len = 4 + 5;
 			ret = 0;
 			uart_receiver.status++;
 			break;
 		case UART_CMD_SET_COLOR:
-			uart_receiver.recv_len = 0;
-			uart_receiver.expect_recv_len = 6; // 接下来还需要接收的数据长度
+			uart_receiver.recv_len++;
+			uart_receiver.expect_recv_len = 6 + 5;
 			ret = 0;
 			uart_receiver.status++;
 			break;
 		case UART_CMD_SET_BRIGHTNESS_LEV:
-			uart_receiver.recv_len = 0;
-			uart_receiver.expect_recv_len = 5; // 接下来还需要接收的数据长度
+			uart_receiver.recv_len++;
+			uart_receiver.expect_recv_len = 5 + 5;
 			ret = 0;
 			uart_receiver.status++;
 			break;
@@ -161,7 +169,28 @@ u8 uart_receiver_process_byte(u8 byte)
 		if (uart_receiver.recv_len >=
 			uart_receiver.expect_recv_len)
 		{
-			uart_receiver.status++;
+			// 接收完所有数据后，判断最后一个字节的校验值是否正确
+			for (i = 0; i < uart_receiver.recv_len - 1; i++)
+			{
+				check_val ^= uart_receiver.buffer[i];
+			}
+
+#if USER_DEBUG_ENABLE
+			// printf("check val == %02x \n", (u16)check_val);
+			// printf("recv check val == %02x\n", (u16)byte);
+#endif
+
+			if (check_val != byte)
+			{
+#if USER_DEBUG_ENABLE
+				// printf("check val err\n");
+#endif
+				ret = 1;
+			}
+			else
+			{
+				uart_receiver.status++;
+			}
 		}
 
 #if USER_DEBUG_ENABLE
@@ -174,7 +203,7 @@ u8 uart_receiver_process_byte(u8 byte)
 
 	default:
 #if USER_DEBUG_ENABLE
-		printf("recv sta err\n");
+		// printf("recv sta err\n");
 #endif
 		break;
 	}
@@ -188,10 +217,205 @@ u8 uart_receiver_process_byte(u8 byte)
 	return ret;
 }
 
+static void uart_cmd_dev_on_handle(void)
+{
+	if (pwm_handle_param.cur_mode == PWM_MODE_PWR_ON_ANIM)
+	{
+		// 当前处于开机动画模式，不处理
+		return;
+	}
+}
+
+static void uart_cmd_pair_handle(void)
+{
+#if USER_DEBUG_ENABLE
+	printf("func : uart_cmd_pair_handle\n");
+#endif
+
+	pwm_handle_param.last_mode = pwm_handle_param.cur_mode;
+	pwm_handle_param.cur_mode = PWM_MODE_BREATH_ANIM;
+	pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_INIT;
+}
+
+static void uart_cmd_cancel_pairing_handle(void)
+{
+#if USER_DEBUG_ENABLE
+	printf("func : uart_cmd_cancel_pairing_handle\n");
+#endif
+
+	pwm_handle_param.last_mode = pwm_handle_param.cur_mode;
+	pwm_handle_param.cur_mode = PWM_MODE_BREATH_ANIM;
+	pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_INIT;
+}
+
+static void uart_cmd_set_color_handle(void)
+{
+#if USER_DEBUG_ENABLE
+	u8 i;
+	printf("func : uart_cmd_set_color_handle\n");
+#endif
+
+	if (pwm_handle_param.cur_mode == PWM_MODE_PWR_ON_ANIM ||
+		uart_receiver.recv_len < 11)
+	{
+		/*
+			1. 当前处于开机动画模式，不处理
+			2. 接收到的数据长度不足，不处理
+		*/
+#if USER_DEBUG_ENABLE
+		// printf("func : uart_cmd_set_color_handle\n");
+		printf("uart_receiver.recv_len == %u\n", (u16)uart_receiver.recv_len);
+		printf("err\n");
+#endif
+		return;
+	}
+
+	if (uart_receiver.buffer[8] == 0xD3 &&
+		uart_receiver.buffer[9] == 0x42)
+	{
+#if USER_DEBUG_ENABLE
+		printf("set color temp idx 1\n"); // 设置色温1
+#endif
+
+		pwm_handle_param.color_idx = PWM_COLOR_IDX_TEMPERATURE_1;
+	}
+	else if (uart_receiver.buffer[8] == 0x72 &&
+			 uart_receiver.buffer[9] == 0xA5)
+	{
+#if USER_DEBUG_ENABLE
+		printf("set color temp idx 2\n");
+#endif
+
+		pwm_handle_param.color_idx = PWM_COLOR_IDX_TEMPERATURE_2;
+	}
+	else if (uart_receiver.buffer[8] == 0x3F &&
+			 uart_receiver.buffer[9] == 0xD1)
+	{
+#if USER_DEBUG_ENABLE
+		printf("set color temp idx 3\n");
+#endif
+
+		pwm_handle_param.color_idx = PWM_COLOR_IDX_TEMPERATURE_3;
+	}
+	else if (uart_receiver.buffer[8] == 0x00 &&
+			 uart_receiver.buffer[9] == 0xFF)
+	{
+#if USER_DEBUG_ENABLE
+		printf("set color to blue\n");
+#endif
+
+		pwm_handle_param.color_idx = PWM_COLOR_IDX_BLUE;
+	}
+	else if (uart_receiver.buffer[8] == 0x3F &&
+			 uart_receiver.buffer[9] == 0xA5)
+	{
+#if USER_DEBUG_ENABLE
+		printf("set color to cyan\n");
+#endif
+
+		pwm_handle_param.color_idx = PWM_COLOR_IDX_CYAN;
+	}
+	else if (uart_receiver.buffer[8] == 0xFF &&
+			 uart_receiver.buffer[9] == 0x00)
+	{
+#if USER_DEBUG_ENABLE
+		printf("set color to green\n");
+#endif
+
+		pwm_handle_param.color_idx = PWM_COLOR_IDX_GREEN;
+	}
+	else
+	{
+#if USER_DEBUG_ENABLE
+
+		printf("set color mode err\n");
+		for (i = 0; i < uart_receiver.recv_len; i++)
+		{
+			printf("0x%02x ", (u16)uart_receiver.buffer[i]);
+		}
+
+#endif
+	}
+
+	pwm_handle_refresh_expect_pwm_duty_val();
+}
+
+void uart_cmd_set_brightness_lev_handle(void)
+{
+#if USER_DEBUG_ENABLE
+	printf("func : uart_cmd_set_brightness_lev_handle\n");
+#endif
+
+	if (pwm_handle_param.cur_mode == PWM_MODE_PWR_ON_ANIM ||
+		uart_receiver.recv_len < 10)
+	{
+		/*
+			1. 当前处于开机动画模式，不处理
+			2. 接收到的数据长度不足，不处理
+		*/
+#if USER_DEBUG_ENABLE
+		printf("uart_receiver.recv_len == %u\n", (u16)uart_receiver.recv_len);
+		printf("err\n");
+#endif
+		return;
+	}
+
+	if (uart_receiver.buffer[7] == 0x05)
+	{
+#if USER_DEBUG_ENABLE
+		printf("set brightness lev 1\n"); //
+#endif
+
+		pwm_handle_param.brightness_lev = PWM_BRIGHTNESS_LEV_1;
+	}
+	else if (uart_receiver.buffer[7] == 0x0A)
+	{
+#if USER_DEBUG_ENABLE
+		printf("set brightness lev 2\n"); //
+#endif
+
+		pwm_handle_param.brightness_lev = PWM_BRIGHTNESS_LEV_2;
+	}
+	else if (uart_receiver.buffer[7] == 0x19)
+	{
+#if USER_DEBUG_ENABLE
+		printf("set brightness lev 3\n"); //
+#endif
+
+		pwm_handle_param.brightness_lev = PWM_BRIGHTNESS_LEV_3;
+	}
+	else if (uart_receiver.buffer[7] == 0x32)
+	{
+#if USER_DEBUG_ENABLE
+		printf("set brightness lev 4\n"); //
+#endif
+
+		pwm_handle_param.brightness_lev = PWM_BRIGHTNESS_LEV_4;
+	}
+	else if (uart_receiver.buffer[7] == 0x4B)
+	{
+#if USER_DEBUG_ENABLE
+		printf("set brightness lev 5\n"); //
+#endif
+
+		pwm_handle_param.brightness_lev = PWM_BRIGHTNESS_LEV_5;
+	}
+	else if (uart_receiver.buffer[7] == 0x64)
+	{
+#if USER_DEBUG_ENABLE
+		printf("set brightness lev 6\n"); //
+#endif
+
+		pwm_handle_param.brightness_lev = PWM_BRIGHTNESS_LEV_MAX;
+	}
+
+	pwm_handle_refresh_expect_pwm_duty_val();
+}
+
 void uart_handle(void)
 {
 	u8 recv_byte;
-	u8 ret;
+	u8 ret; // 存放串口处理数据函数的返回值，0: 处理成功，1: 处理失败
 #if USER_DEBUG_ENABLE
 	u8 i;
 #endif
@@ -282,36 +506,54 @@ void uart_handle(void)
 #if USER_DEBUG_ENABLE
 		printf("recv cmd: dev on\n");
 #endif
+
+		uart_cmd_dev_on_handle();
+
 		break;
+		// ============================================================
+		// ============================================================
 	case UART_CMD_DEV_OFF:
 // 关闭设备
 #if USER_DEBUG_ENABLE
 		printf("recv cmd: dev off\n");
 #endif
 		break;
+		// ============================================================
+		// ============================================================
 	case UART_CMD_PAIR:
 // 开始配对
 #if USER_DEBUG_ENABLE
 		printf("recv cmd: pair\n");
 #endif
+		uart_cmd_pair_handle();
 		break;
+		// ============================================================
+		// ============================================================
 	case UART_CMD_CANCEL_PAIRING:
 		// 取消配对
 #if USER_DEBUG_ENABLE
 		printf("recv cmd: cancel pairing\n");
 #endif
+
+		uart_cmd_cancel_pairing_handle();
 		break;
+		// ============================================================
+		// ============================================================
 	case UART_CMD_SET_COLOR:
 		// 设置颜色（颜色、色温）
 #if USER_DEBUG_ENABLE
 		printf("recv cmd: set color\n");
 #endif
+		uart_cmd_set_color_handle();
 		break;
+		// ============================================================
+		// ============================================================
 	case UART_CMD_SET_BRIGHTNESS_LEV:
 		// 设置亮度等级
 #if USER_DEBUG_ENABLE
 		printf("recv cmd: set brightness lev\n");
 #endif
+		uart_cmd_set_brightness_lev_handle();
 		break;
 
 	default:

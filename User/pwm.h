@@ -1,10 +1,11 @@
-#ifndef _PWM_H
-#define _PWM_H
+#ifndef __PWM_H__
+#define __PWM_H__
 
 #include "user_include.h"
 #include "include.h"
 #include <stdio.h>
 
+// 定义 pwm 占空比(硬件上是反相之后再点亮灯光，客户那边描述的10%占空比，到了程序上是90%占空比)
 #define MAX_PWM_DUTY (6000) // 100%占空比   (SYSCLK 4800 0000 /  8000  == 6000)
 enum
 {
@@ -35,8 +36,8 @@ enum
     PWM_0_DUTY_VAL_IN_COLOR_TEMPERATURE_2 = PWM_DUTY_X_PERCENT(65),
     PWM_1_DUTY_VAL_IN_COLOR_TEMPERATURE_2 = PWM_DUTY_X_PERCENT(45),
 
-    PWM_0_DUTY_VAL_IN_COLOR_TEMPERATURE_3 =  PWM_DUTY_X_PERCENT(82),
-    PWM_1_DUTY_VAL_IN_COLOR_TEMPERATURE_3 =  PWM_DUTY_X_PERCENT(25),
+    PWM_0_DUTY_VAL_IN_COLOR_TEMPERATURE_3 = PWM_DUTY_X_PERCENT(82),
+    PWM_1_DUTY_VAL_IN_COLOR_TEMPERATURE_3 = PWM_DUTY_X_PERCENT(25),
 
     PWM_0_DUTY_VAL_IN_COLOR_BLUE = PWM_DUTY_X_PERCENT(100),
     PWM_1_DUTY_VAL_IN_COLOR_BLUE = PWM_DUTY_X_PERCENT(0),
@@ -45,7 +46,7 @@ enum
     PWM_1_DUTY_VAL_IN_COLOR_CYAN = PWM_DUTY_X_PERCENT(65),
 
     PWM_0_DUTY_VAL_IN_COLOR_GREEN = PWM_DUTY_X_PERCENT(0),
-    PWM_1_DUTY_VAL_IN_COLOR_GREEN = PWM_DUTY_X_PERCENT(100), 
+    PWM_1_DUTY_VAL_IN_COLOR_GREEN = PWM_DUTY_X_PERCENT(100),
 };
 
 #if 0
@@ -76,7 +77,7 @@ extern volatile u16 limited_pwm_duty_due_to_temp;
 extern volatile u16 limited_pwm_duty_due_to_unstable_engine;
 // 由于风扇异常，限制的可以调节到的最大占空比（对所有PWM通道都生效，默认为最大占空比）
 extern volatile u16 limited_pwm_duty_due_to_fan_err;
-  
+
 // extern volatile u8 pwm_mode;
 // extern volatile u8 pwm_brightness_lev;
 
@@ -84,7 +85,6 @@ void pwm_init(void);
 
 // 电源电压低于170V-AC,启动低压保护，电源电压高于170V-AC，关闭低压保护
 void according_pin9_to_adjust_pwm(void);
-// void according_pin9_to_adjust_pin16(void); // 根据9脚的电压来设定16脚的电平
 
 extern u8 get_pwm_channel_0_status(void); // 获取第一路PWM的运行状态
 extern u8 get_pwm_channel_1_status(void); // 获取第二路PWM的运行状态
@@ -100,6 +100,6 @@ void set_pwm_channel_1_duty(u16 channel_duty);
 
 u16 get_pwm_channel_x_adjust_duty(const u16 pwm_adjust_duty);
 
-void pwm_mode_handle(void);
+// void pwm_mode_handle(void);
 
 #endif
