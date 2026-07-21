@@ -1,6 +1,8 @@
 #include "pwm_handle.h"
 #include "power_on.h"
 
+#include "user_config.h"
+
 volatile pwm_handle_param_t pwm_handle_param;
 
 // void pwm_handle_param_init(void)
@@ -177,74 +179,114 @@ static void pwm_handle_in_normal_work(void)
 static void pwm_handle_in_breath_anim(void)
 {
 	// static volatile u8 breath_cycle_cnt = 0; // 呼吸灯的周期计数
-	static volatile u8 breath_step_cnt = 0;	 // 步进计数
+	static volatile u8 breath_step_cnt = 0; // 呼吸步骤计数，每完成一次呼吸会加2
+	/*
+		呼吸灯的进度，
+		范围：0 ~ PWM_BREATH_PROGRESS_MAX ，映射到pwm占空比值的 0 ~ 100%
+	*/
+	static volatile u16 breath_progress = 0;
+	// 呼吸灯的进度最大值，根据当前最大的 dest_pwm_x_duty_val 计算得到
+	// static volatile u16 breath_progress_max = 0;
 
 	switch (pwm_handle_param.breath_anim_sta)
 	{
 	case PWM_BREATH_ANIM_STA_INIT:
 		// 刚进入呼吸灯动画
-
-		// breath_cycle_cnt = 0;
 		breath_step_cnt = 0;
+		breath_progress = 0; // 初始化进度为0
 
+		// 判断当前是否已经点亮，如果已经点亮，则从中间打断进入呼吸灯动画
 		if (pwm_handle_param.cur_pwm_0_duty_val || pwm_handle_param.cur_pwm_1_duty_val)
 		{
-			// 当前灯光是打开的，接下来呼吸渐灭
 			pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_DOWN;
+
+			// 根据当前最大的目标值，得到当前呼吸的进度
+			if (pwm_handle_param.dest_pwm_0_duty_val >= pwm_handle_param.dest_pwm_1_duty_val)
+			{
+				breath_progress =
+					pwm_handle_param.cur_pwm_0_duty_val *
+					PWM_BREATH_PROGRESS_MAX /
+					pwm_handle_param.dest_pwm_0_duty_val;
+			}
+			else
+			{
+				breath_progress =
+					pwm_handle_param.cur_pwm_1_duty_val *
+					PWM_BREATH_PROGRESS_MAX /
+					pwm_handle_param.dest_pwm_1_duty_val;
+			}
 		}
 		else
 		{
 			// 当前灯光是关闭的，接下来呼吸渐亮
 			pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_UP;
 		}
+
+#if USER_DEBUG_ENABLE
+		printf("breath sta init\n");
+		printf("breath progress = %u\n", (u16)breath_progress);
+		P26 = ~P26;
+#endif
 		break;
 
 	case PWM_BREATH_ANIM_STA_UP:
 		// 呼吸灯渐亮
-
-		if (pwm_handle_param.cur_pwm_0_duty_val <
-			pwm_handle_param.dest_pwm_0_duty_val)
+		if (breath_progress < PWM_BREATH_PROGRESS_MAX)
 		{
-			pwm_handle_param.cur_pwm_0_duty_val++;
+			breath_progress++;
+#if USER_DEBUG_ENABLE
+			// printf("breath progress = %u\n", (u16)breath_progress);
+#endif
 		}
 
-		if (pwm_handle_param.cur_pwm_1_duty_val <
-			pwm_handle_param.dest_pwm_1_duty_val)
-		{
-			pwm_handle_param.cur_pwm_1_duty_val++;
-		}
+		// 根据统一进度，同步计算两路 PWM 的当前占空比
+		pwm_handle_param.cur_pwm_0_duty_val =
+			(u16)((u32)pwm_handle_param.dest_pwm_0_duty_val *
+				  breath_progress / PWM_BREATH_PROGRESS_MAX);
+		pwm_handle_param.cur_pwm_1_duty_val =
+			(u16)((u32)pwm_handle_param.dest_pwm_1_duty_val *
+				  breath_progress / PWM_BREATH_PROGRESS_MAX);
 
-		if ((pwm_handle_param.cur_pwm_0_duty_val ==
-			 pwm_handle_param.dest_pwm_0_duty_val) &&
-			(pwm_handle_param.cur_pwm_1_duty_val ==
-			 pwm_handle_param.dest_pwm_1_duty_val))
+		if (breath_progress >= PWM_BREATH_PROGRESS_MAX)
 		{
 			// 呼吸灯渐亮完成，接下来呼吸渐灭
 			pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_DOWN;
 			breath_step_cnt++;
+
+#if USER_DEBUG_ENABLE
+			P26 = ~P26;
+#endif
 		}
 
 		break;
 
 	case PWM_BREATH_ANIM_STA_DOWN:
 		// 呼吸灯渐灭
-
-		if (pwm_handle_param.cur_pwm_0_duty_val > 0)
+		if (breath_progress > 0)
 		{
-			pwm_handle_param.cur_pwm_0_duty_val--;
+			breath_progress--;
+#if USER_DEBUG_ENABLE
+			// printf("breath progress = %u\n", (u16)breath_progress);
+#endif
 		}
 
-		if (pwm_handle_param.cur_pwm_1_duty_val > 0)
-		{
-			pwm_handle_param.cur_pwm_1_duty_val--;
-		}
+		// 根据统一进度，同步计算两路 PWM 的当前占空比
+		pwm_handle_param.cur_pwm_0_duty_val =
+			(u16)((u32)pwm_handle_param.dest_pwm_0_duty_val *
+				  breath_progress / PWM_BREATH_PROGRESS_MAX);
+		pwm_handle_param.cur_pwm_1_duty_val =
+			(u16)((u32)pwm_handle_param.dest_pwm_1_duty_val *
+				  breath_progress / PWM_BREATH_PROGRESS_MAX);
 
-		if ((pwm_handle_param.cur_pwm_0_duty_val == 0) &&
-			(pwm_handle_param.cur_pwm_1_duty_val == 0))
+		if (breath_progress == 0)
 		{
 			// 呼吸灯渐灭完成，接下来呼吸渐亮
 			pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_UP;
 			breath_step_cnt++;
+
+#if USER_DEBUG_ENABLE
+			P26 = ~P26;
+#endif
 		}
 
 		break;
@@ -255,10 +297,14 @@ static void pwm_handle_in_breath_anim(void)
 		// 呼吸灯动画执行完 5次 呼吸，退出呼吸灯动画
 
 		breath_step_cnt = 0;
-		// breath_cycle_cnt = 0;
 
 		// 可能是从开机缓启动进入的呼吸灯动画，也可能是从正常工作模式进入的呼吸灯动画
 		pwm_handle_param.cur_mode = pwm_handle_param.last_mode;
+
+#if USER_DEBUG_ENABLE
+		printf("breath finish\n");
+		P26 = ~P26;
+#endif
 	}
 
 	// 实时更新PWM硬件输出
@@ -313,7 +359,7 @@ void pwm_handle_100us_isr(void)
 	case PWM_MODE_BREATH_ANIM:
 
 		pwm_handle_in_breath_anim();
- 
+
 		break;
 
 	default:

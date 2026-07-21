@@ -63,7 +63,7 @@ void power_on_handle(void)
         // TODO 如果开机期间，需要转到呼吸模式
         // TODO 开机缓启动期间，只处理 配对 和 取消配对这两种情况
 
-        // TODO 如果从呼吸动画退出，到了缓启动期间，cur_pwm_x_duty_val 的值应该是确定值
+        // TODO 如果从呼吸动画退出，到了缓启动期间， cur_pwm_x_duty_val 的值应该是确定值
         // uart_handle();
     }
 

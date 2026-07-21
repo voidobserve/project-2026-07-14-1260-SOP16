@@ -3,6 +3,12 @@
 
 #include "typedef.h"
 
+/*
+	呼吸时，呼吸的范围，0 ~ PWM_BREATH_PROGRESS_MAX
+	数值越小，呼吸时间越短
+*/ 
+#define PWM_BREATH_PROGRESS_MAX ((u16)1000 * 5)
+
 enum
 {
 	PWM_MODE_OFF = 0,

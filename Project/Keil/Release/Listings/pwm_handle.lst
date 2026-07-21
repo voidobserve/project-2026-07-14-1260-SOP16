@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.7.0   PWM_HANDLE                                                        07/20/2026 17:56:21 PAGE 1   
+C51 COMPILER V9.60.7.0   PWM_HANDLE                                                        07/21/2026 10:57:27 PAGE 1   
 
 
 C51 COMPILER V9.60.7.0, COMPILATION OF MODULE PWM_HANDLE
@@ -12,18 +12,20 @@ line level    source
    1          #include "pwm_handle.h"
    2          #include "power_on.h"
    3          
-   4          volatile pwm_handle_param_t pwm_handle_param;
+   4          #include "user_config.h"
    5          
-   6          // void pwm_handle_param_init(void)
-   7          // {
-   8          //      pwm_handle_param.dest_mode = PWM_MODE_NORMAL_WORK;
-   9          //      pwm_handle_param.cur_mode = PWM_MODE_PWR_ON_ANIM;
-  10          
-  11          //      pwm_handle_param.color_idx = PWM_COLOR_IDX_CYAN;
-  12          //      pwm_handle_param.brightness_lev = PWM_BRIGHTNESS_LEV_MAX;
-  13          // }
-  14          
-  15          #if 0
+   6          volatile pwm_handle_param_t pwm_handle_param;
+   7          
+   8          // void pwm_handle_param_init(void)
+   9          // {
+  10          //      pwm_handle_param.dest_mode = PWM_MODE_NORMAL_WORK;
+  11          //      pwm_handle_param.cur_mode = PWM_MODE_PWR_ON_ANIM;
+  12          
+  13          //      pwm_handle_param.color_idx = PWM_COLOR_IDX_CYAN;
+  14          //      pwm_handle_param.brightness_lev = PWM_BRIGHTNESS_LEV_MAX;
+  15          // }
+  16          
+  17          #if 0
               /**
                * @brief 设置某个通道的占空比值
                *
@@ -49,314 +51,362 @@ line level    source
               {
               }
               #endif
-  40          
-  41          /**
-  42           * @brief  根据 pwm_handle_param 中的参数 color_idx 和 brightness_lev ，
-  43           *              设置期望的pwm占空比值
-  44           *
-  45           * @details 根据颜色索引（ color_idx ）和亮度级别（ brightness_lev ）设置PWM占空比
-  46           */
-  47          void pwm_handle_refresh_expect_pwm_duty_val(void)
-  48          {
-  49   1              switch (pwm_handle_param.color_idx)
-  50   1              {
-  51   2              case PWM_COLOR_IDX_TEMPERATURE_1:
-  52   2              {
-C51 COMPILER V9.60.7.0   PWM_HANDLE                                                        07/20/2026 17:56:21 PAGE 2   
+  42          
+  43          /**
+  44           * @brief  根据 pwm_handle_param 中的参数 color_idx 和 brightness_lev ，
+  45           *              设置期望的pwm占空比值
+  46           *
+  47           * @details 根据颜色索引（ color_idx ）和亮度级别（ brightness_lev ）设置PWM占空比
+  48           */
+  49          void pwm_handle_refresh_expect_pwm_duty_val(void)
+  50          {
+  51   1              switch (pwm_handle_param.color_idx)
+  52   1              {
+C51 COMPILER V9.60.7.0   PWM_HANDLE                                                        07/21/2026 10:57:27 PAGE 2   
 
-  53   3                      pwm_handle_param.expect_pwm_0_duty_val = PWM_0_DUTY_VAL_IN_COLOR_TEMPERATURE_1;
-  54   3                      pwm_handle_param.expect_pwm_1_duty_val = PWM_1_DUTY_VAL_IN_COLOR_TEMPERATURE_1;
-  55   3              }
-  56   2              break;
-  57   2              // ===========================================================
-  58   2              case PWM_COLOR_IDX_TEMPERATURE_2:
-  59   2              {
-  60   3                      pwm_handle_param.expect_pwm_0_duty_val = PWM_0_DUTY_VAL_IN_COLOR_TEMPERATURE_2;
-  61   3                      pwm_handle_param.expect_pwm_1_duty_val = PWM_1_DUTY_VAL_IN_COLOR_TEMPERATURE_2;
-  62   3              }
-  63   2              break;
-  64   2              // ===========================================================
-  65   2              case PWM_COLOR_IDX_TEMPERATURE_3:
-  66   2              {
-  67   3                      pwm_handle_param.expect_pwm_0_duty_val = PWM_0_DUTY_VAL_IN_COLOR_TEMPERATURE_3;
-  68   3                      pwm_handle_param.expect_pwm_1_duty_val = PWM_1_DUTY_VAL_IN_COLOR_TEMPERATURE_3;
-  69   3              }
-  70   2              break;
-  71   2              // ===========================================================
-  72   2              case PWM_COLOR_IDX_BLUE:
-  73   2              {
-  74   3                      // 获取最终的目标占空比
-  75   3                      pwm_handle_param.expect_pwm_0_duty_val = PWM_0_DUTY_VAL_IN_COLOR_BLUE;
-  76   3                      pwm_handle_param.expect_pwm_1_duty_val = PWM_1_DUTY_VAL_IN_COLOR_BLUE;
-  77   3              }
-  78   2              break;
-  79   2              // ===========================================================
-  80   2              case PWM_COLOR_IDX_CYAN:
-  81   2              {
-  82   3                      // 获取最终的目标占空比
-  83   3                      pwm_handle_param.expect_pwm_0_duty_val = PWM_0_DUTY_VAL_IN_COLOR_CYAN;
-  84   3                      pwm_handle_param.expect_pwm_1_duty_val = PWM_1_DUTY_VAL_IN_COLOR_CYAN;
-  85   3              }
-  86   2              break;
-  87   2              // ===========================================================
-  88   2              case PWM_COLOR_IDX_GREEN:
-  89   2              {
-  90   3                      // 获取最终的目标占空比
-  91   3                      pwm_handle_param.expect_pwm_0_duty_val = PWM_0_DUTY_VAL_IN_COLOR_GREEN;
-  92   3                      pwm_handle_param.expect_pwm_1_duty_val = PWM_1_DUTY_VAL_IN_COLOR_GREEN;
-  93   3              }
-  94   2              break;
-  95   2      
-  96   2                      // ===========================================================
-  97   2              default:
-  98   2              {
-  99   3                      return;
- 100   3              }
- 101   2              break;
- 102   2              }
- 103   1      
- 104   1              switch (pwm_handle_param.brightness_lev)
- 105   1              {
- 106   2              case PWM_BRIGHTNESS_LEV_1:
- 107   2                      pwm_handle_param.expect_pwm_0_duty_val = (u32)pwm_handle_param.expect_pwm_0_duty_val * 5 / 100;
- 108   2                      pwm_handle_param.expect_pwm_1_duty_val = (u32)pwm_handle_param.expect_pwm_1_duty_val * 5 / 100;
- 109   2                      break;
- 110   2      
- 111   2              case PWM_BRIGHTNESS_LEV_2:
- 112   2                      pwm_handle_param.expect_pwm_0_duty_val = (u32)pwm_handle_param.expect_pwm_0_duty_val * 10 / 100;
- 113   2                      pwm_handle_param.expect_pwm_1_duty_val = (u32)pwm_handle_param.expect_pwm_1_duty_val * 10 / 100;
- 114   2                      break;
-C51 COMPILER V9.60.7.0   PWM_HANDLE                                                        07/20/2026 17:56:21 PAGE 3   
+  53   2              case PWM_COLOR_IDX_TEMPERATURE_1:
+  54   2              {
+  55   3                      pwm_handle_param.expect_pwm_0_duty_val = PWM_0_DUTY_VAL_IN_COLOR_TEMPERATURE_1;
+  56   3                      pwm_handle_param.expect_pwm_1_duty_val = PWM_1_DUTY_VAL_IN_COLOR_TEMPERATURE_1;
+  57   3              }
+  58   2              break;
+  59   2              // ===========================================================
+  60   2              case PWM_COLOR_IDX_TEMPERATURE_2:
+  61   2              {
+  62   3                      pwm_handle_param.expect_pwm_0_duty_val = PWM_0_DUTY_VAL_IN_COLOR_TEMPERATURE_2;
+  63   3                      pwm_handle_param.expect_pwm_1_duty_val = PWM_1_DUTY_VAL_IN_COLOR_TEMPERATURE_2;
+  64   3              }
+  65   2              break;
+  66   2              // ===========================================================
+  67   2              case PWM_COLOR_IDX_TEMPERATURE_3:
+  68   2              {
+  69   3                      pwm_handle_param.expect_pwm_0_duty_val = PWM_0_DUTY_VAL_IN_COLOR_TEMPERATURE_3;
+  70   3                      pwm_handle_param.expect_pwm_1_duty_val = PWM_1_DUTY_VAL_IN_COLOR_TEMPERATURE_3;
+  71   3              }
+  72   2              break;
+  73   2              // ===========================================================
+  74   2              case PWM_COLOR_IDX_BLUE:
+  75   2              {
+  76   3                      // 获取最终的目标占空比
+  77   3                      pwm_handle_param.expect_pwm_0_duty_val = PWM_0_DUTY_VAL_IN_COLOR_BLUE;
+  78   3                      pwm_handle_param.expect_pwm_1_duty_val = PWM_1_DUTY_VAL_IN_COLOR_BLUE;
+  79   3              }
+  80   2              break;
+  81   2              // ===========================================================
+  82   2              case PWM_COLOR_IDX_CYAN:
+  83   2              {
+  84   3                      // 获取最终的目标占空比
+  85   3                      pwm_handle_param.expect_pwm_0_duty_val = PWM_0_DUTY_VAL_IN_COLOR_CYAN;
+  86   3                      pwm_handle_param.expect_pwm_1_duty_val = PWM_1_DUTY_VAL_IN_COLOR_CYAN;
+  87   3              }
+  88   2              break;
+  89   2              // ===========================================================
+  90   2              case PWM_COLOR_IDX_GREEN:
+  91   2              {
+  92   3                      // 获取最终的目标占空比
+  93   3                      pwm_handle_param.expect_pwm_0_duty_val = PWM_0_DUTY_VAL_IN_COLOR_GREEN;
+  94   3                      pwm_handle_param.expect_pwm_1_duty_val = PWM_1_DUTY_VAL_IN_COLOR_GREEN;
+  95   3              }
+  96   2              break;
+  97   2      
+  98   2                      // ===========================================================
+  99   2              default:
+ 100   2              {
+ 101   3                      return;
+ 102   3              }
+ 103   2              break;
+ 104   2              }
+ 105   1      
+ 106   1              switch (pwm_handle_param.brightness_lev)
+ 107   1              {
+ 108   2              case PWM_BRIGHTNESS_LEV_1:
+ 109   2                      pwm_handle_param.expect_pwm_0_duty_val = (u32)pwm_handle_param.expect_pwm_0_duty_val * 5 / 100;
+ 110   2                      pwm_handle_param.expect_pwm_1_duty_val = (u32)pwm_handle_param.expect_pwm_1_duty_val * 5 / 100;
+ 111   2                      break;
+ 112   2      
+ 113   2              case PWM_BRIGHTNESS_LEV_2:
+ 114   2                      pwm_handle_param.expect_pwm_0_duty_val = (u32)pwm_handle_param.expect_pwm_0_duty_val * 10 / 100;
+C51 COMPILER V9.60.7.0   PWM_HANDLE                                                        07/21/2026 10:57:27 PAGE 3   
 
- 115   2      
- 116   2              case PWM_BRIGHTNESS_LEV_3:
- 117   2                      pwm_handle_param.expect_pwm_0_duty_val = (u32)pwm_handle_param.expect_pwm_0_duty_val * 25 / 100;
- 118   2                      pwm_handle_param.expect_pwm_1_duty_val = (u32)pwm_handle_param.expect_pwm_1_duty_val * 25 / 100;
- 119   2                      break;
- 120   2      
- 121   2              case PWM_BRIGHTNESS_LEV_4:
- 122   2                      pwm_handle_param.expect_pwm_0_duty_val = (u32)pwm_handle_param.expect_pwm_0_duty_val * 50 / 100;
- 123   2                      pwm_handle_param.expect_pwm_1_duty_val = (u32)pwm_handle_param.expect_pwm_1_duty_val * 50 / 100;
- 124   2                      break;
- 125   2      
- 126   2              case PWM_BRIGHTNESS_LEV_5:
- 127   2                      pwm_handle_param.expect_pwm_0_duty_val = (u32)pwm_handle_param.expect_pwm_0_duty_val * 75 / 100;
- 128   2                      pwm_handle_param.expect_pwm_1_duty_val = (u32)pwm_handle_param.expect_pwm_1_duty_val * 75 / 100;
- 129   2                      break;
- 130   2      
- 131   2                      // 目前 亮度等级 6 和 最高亮度等级 一样
- 132   2              case PWM_BRIGHTNESS_LEV_6:
- 133   2                      pwm_handle_param.expect_pwm_0_duty_val = (u32)pwm_handle_param.expect_pwm_0_duty_val * 100 / 100;
- 134   2                      pwm_handle_param.expect_pwm_1_duty_val = (u32)pwm_handle_param.expect_pwm_1_duty_val * 100 / 100;
- 135   2                      break;
- 136   2              }
- 137   1      
- 138   1              // 根据期望值，得到目标值，再立即当前值设置为目标值，最后立即设置pwm占空
+ 115   2                      pwm_handle_param.expect_pwm_1_duty_val = (u32)pwm_handle_param.expect_pwm_1_duty_val * 10 / 100;
+ 116   2                      break;
+ 117   2      
+ 118   2              case PWM_BRIGHTNESS_LEV_3:
+ 119   2                      pwm_handle_param.expect_pwm_0_duty_val = (u32)pwm_handle_param.expect_pwm_0_duty_val * 25 / 100;
+ 120   2                      pwm_handle_param.expect_pwm_1_duty_val = (u32)pwm_handle_param.expect_pwm_1_duty_val * 25 / 100;
+ 121   2                      break;
+ 122   2      
+ 123   2              case PWM_BRIGHTNESS_LEV_4:
+ 124   2                      pwm_handle_param.expect_pwm_0_duty_val = (u32)pwm_handle_param.expect_pwm_0_duty_val * 50 / 100;
+ 125   2                      pwm_handle_param.expect_pwm_1_duty_val = (u32)pwm_handle_param.expect_pwm_1_duty_val * 50 / 100;
+ 126   2                      break;
+ 127   2      
+ 128   2              case PWM_BRIGHTNESS_LEV_5:
+ 129   2                      pwm_handle_param.expect_pwm_0_duty_val = (u32)pwm_handle_param.expect_pwm_0_duty_val * 75 / 100;
+ 130   2                      pwm_handle_param.expect_pwm_1_duty_val = (u32)pwm_handle_param.expect_pwm_1_duty_val * 75 / 100;
+ 131   2                      break;
+ 132   2      
+ 133   2                      // 目前 亮度等级 6 和 最高亮度等级 一样
+ 134   2              case PWM_BRIGHTNESS_LEV_6:
+ 135   2                      pwm_handle_param.expect_pwm_0_duty_val = (u32)pwm_handle_param.expect_pwm_0_duty_val * 100 / 100;
+ 136   2                      pwm_handle_param.expect_pwm_1_duty_val = (u32)pwm_handle_param.expect_pwm_1_duty_val * 100 / 100;
+ 137   2                      break;
+ 138   2              }
+ 139   1      
+ 140   1              // 根据期望值，得到目标值，再立即当前值设置为目标值，最后立即设置pwm占空
              -比值
- 139   1              pwm_handle_param.dest_pwm_0_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_0_duty_v
+ 141   1              pwm_handle_param.dest_pwm_0_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_0_duty_v
              -al);
- 140   1              pwm_handle_param.dest_pwm_1_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_1_duty_v
+ 142   1              pwm_handle_param.dest_pwm_1_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_1_duty_v
              -al);
- 141   1              pwm_handle_param.cur_pwm_0_duty_val = pwm_handle_param.dest_pwm_0_duty_val;
- 142   1              pwm_handle_param.cur_pwm_1_duty_val = pwm_handle_param.dest_pwm_1_duty_val;
- 143   1              set_pwm_channel_0_duty(pwm_handle_param.cur_pwm_0_duty_val);
- 144   1              set_pwm_channel_1_duty(pwm_handle_param.cur_pwm_1_duty_val);
- 145   1      }
- 146          
- 147          static void pwm_handle_in_normal_work(void)
- 148          {
- 149   1              // =================================================================
- 150   1              // pwm_channel_0                                               //
+ 143   1              pwm_handle_param.cur_pwm_0_duty_val = pwm_handle_param.dest_pwm_0_duty_val;
+ 144   1              pwm_handle_param.cur_pwm_1_duty_val = pwm_handle_param.dest_pwm_1_duty_val;
+ 145   1              set_pwm_channel_0_duty(pwm_handle_param.cur_pwm_0_duty_val);
+ 146   1              set_pwm_channel_1_duty(pwm_handle_param.cur_pwm_1_duty_val);
+ 147   1      }
+ 148          
+ 149          static void pwm_handle_in_normal_work(void)
+ 150          {
  151   1              // =================================================================
- 152   1              if (pwm_handle_param.dest_pwm_0_duty_val > pwm_handle_param.cur_pwm_0_duty_val)
- 153   1              {
- 154   2                      pwm_handle_param.cur_pwm_0_duty_val++;
- 155   2              }
- 156   1              else if (pwm_handle_param.dest_pwm_0_duty_val < pwm_handle_param.cur_pwm_0_duty_val)
- 157   1              {
- 158   2                      pwm_handle_param.cur_pwm_0_duty_val--;
- 159   2              }
- 160   1      
- 161   1              // =================================================================
- 162   1              // pwm_channel_1                                               //
+ 152   1              // pwm_channel_0                                               //
+ 153   1              // =================================================================
+ 154   1              if (pwm_handle_param.dest_pwm_0_duty_val > pwm_handle_param.cur_pwm_0_duty_val)
+ 155   1              {
+ 156   2                      pwm_handle_param.cur_pwm_0_duty_val++;
+ 157   2              }
+ 158   1              else if (pwm_handle_param.dest_pwm_0_duty_val < pwm_handle_param.cur_pwm_0_duty_val)
+ 159   1              {
+ 160   2                      pwm_handle_param.cur_pwm_0_duty_val--;
+ 161   2              }
+ 162   1      
  163   1              // =================================================================
- 164   1              if (pwm_handle_param.dest_pwm_1_duty_val > pwm_handle_param.cur_pwm_1_duty_val)
- 165   1              {
- 166   2                      pwm_handle_param.cur_pwm_1_duty_val++;
- 167   2              }
- 168   1              else if (pwm_handle_param.dest_pwm_1_duty_val < pwm_handle_param.cur_pwm_1_duty_val)
- 169   1              {
- 170   2                      pwm_handle_param.cur_pwm_1_duty_val--;
- 171   2              }
- 172   1      
- 173   1              set_pwm_channel_0_duty(pwm_handle_param.cur_pwm_0_duty_val);
-C51 COMPILER V9.60.7.0   PWM_HANDLE                                                        07/20/2026 17:56:21 PAGE 4   
+ 164   1              // pwm_channel_1                                               //
+ 165   1              // =================================================================
+ 166   1              if (pwm_handle_param.dest_pwm_1_duty_val > pwm_handle_param.cur_pwm_1_duty_val)
+ 167   1              {
+ 168   2                      pwm_handle_param.cur_pwm_1_duty_val++;
+ 169   2              }
+ 170   1              else if (pwm_handle_param.dest_pwm_1_duty_val < pwm_handle_param.cur_pwm_1_duty_val)
+ 171   1              {
+ 172   2                      pwm_handle_param.cur_pwm_1_duty_val--;
+ 173   2              }
+C51 COMPILER V9.60.7.0   PWM_HANDLE                                                        07/21/2026 10:57:27 PAGE 4   
 
- 174   1              set_pwm_channel_1_duty(pwm_handle_param.cur_pwm_1_duty_val);
- 175   1      }
- 176          
- 177          static void pwm_handle_in_breath_anim(void)
- 178          {
- 179   1              // static volatile u8 breath_cycle_cnt = 0; // 呼吸灯的周期计数
- 180   1              static volatile u8 breath_step_cnt = 0;  // 步进计数
- 181   1      
- 182   1              switch (pwm_handle_param.breath_anim_sta)
- 183   1              {
- 184   2              case PWM_BREATH_ANIM_STA_INIT:
- 185   2                      // 刚进入呼吸灯动画
- 186   2      
- 187   2                      // breath_cycle_cnt = 0;
- 188   2                      breath_step_cnt = 0;
- 189   2      
- 190   2                      if (pwm_handle_param.cur_pwm_0_duty_val || pwm_handle_param.cur_pwm_1_duty_val)
- 191   2                      {
- 192   3                              // 当前灯光是打开的，接下来呼吸渐灭
- 193   3                              pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_DOWN;
- 194   3                      }
- 195   2                      else
- 196   2                      {
- 197   3                              // 当前灯光是关闭的，接下来呼吸渐亮
- 198   3                              pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_UP;
- 199   3                      }
- 200   2                      break;
- 201   2      
- 202   2              case PWM_BREATH_ANIM_STA_UP:
- 203   2                      // 呼吸灯渐亮
- 204   2      
- 205   2                      if (pwm_handle_param.cur_pwm_0_duty_val <
- 206   2                              pwm_handle_param.dest_pwm_0_duty_val)
- 207   2                      {
- 208   3                              pwm_handle_param.cur_pwm_0_duty_val++;
- 209   3                      }
- 210   2      
- 211   2                      if (pwm_handle_param.cur_pwm_1_duty_val <
- 212   2                              pwm_handle_param.dest_pwm_1_duty_val)
- 213   2                      {
- 214   3                              pwm_handle_param.cur_pwm_1_duty_val++;
- 215   3                      }
- 216   2      
- 217   2                      if ((pwm_handle_param.cur_pwm_0_duty_val ==
- 218   2                               pwm_handle_param.dest_pwm_0_duty_val) &&
- 219   2                              (pwm_handle_param.cur_pwm_1_duty_val ==
- 220   2                               pwm_handle_param.dest_pwm_1_duty_val))
- 221   2                      {
- 222   3                              // 呼吸灯渐亮完成，接下来呼吸渐灭
- 223   3                              pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_DOWN;
- 224   3                              breath_step_cnt++;
- 225   3                      }
- 226   2      
- 227   2                      break;
- 228   2      
- 229   2              case PWM_BREATH_ANIM_STA_DOWN:
- 230   2                      // 呼吸灯渐灭
+ 174   1      
+ 175   1              set_pwm_channel_0_duty(pwm_handle_param.cur_pwm_0_duty_val);
+ 176   1              set_pwm_channel_1_duty(pwm_handle_param.cur_pwm_1_duty_val);
+ 177   1      }
+ 178          
+ 179          static void pwm_handle_in_breath_anim(void)
+ 180          {
+ 181   1              // static volatile u8 breath_cycle_cnt = 0; // 呼吸灯的周期计数
+ 182   1              static volatile u8 breath_step_cnt = 0; // 呼吸步骤计数，每完成一次呼吸会加2
+ 183   1              /*
+ 184   1                      呼吸灯的进度，
+ 185   1                      范围：0 ~ PWM_BREATH_PROGRESS_MAX ，映射到pwm占空比值的 0 ~ 100%
+ 186   1              */
+ 187   1              static volatile u16 breath_progress = 0;
+ 188   1              // 呼吸灯的进度最大值，根据当前最大的 dest_pwm_x_duty_val 计算得到
+ 189   1              // static volatile u16 breath_progress_max = 0;
+ 190   1      
+ 191   1              switch (pwm_handle_param.breath_anim_sta)
+ 192   1              {
+ 193   2              case PWM_BREATH_ANIM_STA_INIT:
+ 194   2                      // 刚进入呼吸灯动画
+ 195   2                      breath_step_cnt = 0;
+ 196   2                      breath_progress = 0; // 初始化进度为0
+ 197   2      
+ 198   2                      // 判断当前是否已经点亮，如果已经点亮，则从中间打断进入呼吸灯动画
+ 199   2                      if (pwm_handle_param.cur_pwm_0_duty_val || pwm_handle_param.cur_pwm_1_duty_val)
+ 200   2                      {
+ 201   3                              pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_DOWN;
+ 202   3      
+ 203   3                              // 根据当前最大的目标值，得到当前呼吸的进度
+ 204   3                              if (pwm_handle_param.dest_pwm_0_duty_val >= pwm_handle_param.dest_pwm_1_duty_val)
+ 205   3                              {
+ 206   4                                      breath_progress =
+ 207   4                                              pwm_handle_param.cur_pwm_0_duty_val *
+ 208   4                                              PWM_BREATH_PROGRESS_MAX /
+ 209   4                                              pwm_handle_param.dest_pwm_0_duty_val;
+ 210   4                              }
+ 211   3                              else
+ 212   3                              {
+ 213   4                                      breath_progress =
+ 214   4                                              pwm_handle_param.cur_pwm_1_duty_val *
+ 215   4                                              PWM_BREATH_PROGRESS_MAX /
+ 216   4                                              pwm_handle_param.dest_pwm_1_duty_val;
+ 217   4                              }
+ 218   3                      }
+ 219   2                      else
+ 220   2                      {
+ 221   3                              // 当前灯光是关闭的，接下来呼吸渐亮
+ 222   3                              pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_UP;
+ 223   3                      }
+ 224   2      
+ 225   2      #if USER_DEBUG_ENABLE
+ 226   2                      printf("breath sta init\n");
+ 227   2                      printf("breath progress = %u\n", (u16)breath_progress);
+ 228   2                      P26 = ~P26;
+ 229   2      #endif
+ 230   2                      break;
  231   2      
- 232   2                      if (pwm_handle_param.cur_pwm_0_duty_val > 0)
- 233   2                      {
- 234   3                              pwm_handle_param.cur_pwm_0_duty_val--;
- 235   3                      }
-C51 COMPILER V9.60.7.0   PWM_HANDLE                                                        07/20/2026 17:56:21 PAGE 5   
+ 232   2              case PWM_BREATH_ANIM_STA_UP:
+ 233   2                      // 呼吸灯渐亮
+ 234   2                      if (breath_progress < PWM_BREATH_PROGRESS_MAX)
+ 235   2                      {
+C51 COMPILER V9.60.7.0   PWM_HANDLE                                                        07/21/2026 10:57:27 PAGE 5   
 
- 236   2      
- 237   2                      if (pwm_handle_param.cur_pwm_1_duty_val > 0)
- 238   2                      {
- 239   3                              pwm_handle_param.cur_pwm_1_duty_val--;
+ 236   3                              breath_progress++;
+ 237   3      #if USER_DEBUG_ENABLE
+ 238   3                              // printf("breath progress = %u\n", (u16)breath_progress);
+ 239   3      #endif
  240   3                      }
  241   2      
- 242   2                      if ((pwm_handle_param.cur_pwm_0_duty_val == 0) &&
- 243   2                              (pwm_handle_param.cur_pwm_1_duty_val == 0))
- 244   2                      {
- 245   3                              // 呼吸灯渐灭完成，接下来呼吸渐亮
- 246   3                              pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_UP;
- 247   3                              breath_step_cnt++;
- 248   3                      }
+ 242   2                      // 根据统一进度，同步计算两路 PWM 的当前占空比
+ 243   2                      pwm_handle_param.cur_pwm_0_duty_val =
+ 244   2                              (u16)((u32)pwm_handle_param.dest_pwm_0_duty_val *
+ 245   2                                        breath_progress / PWM_BREATH_PROGRESS_MAX);
+ 246   2                      pwm_handle_param.cur_pwm_1_duty_val =
+ 247   2                              (u16)((u32)pwm_handle_param.dest_pwm_1_duty_val *
+ 248   2                                        breath_progress / PWM_BREATH_PROGRESS_MAX);
  249   2      
- 250   2                      break;
- 251   2              }
- 252   1      
- 253   1              if (breath_step_cnt >= (5 * 2))
- 254   1              {
- 255   2                      // 呼吸灯动画执行完 5次 呼吸，退出呼吸灯动画
- 256   2      
- 257   2                      breath_step_cnt = 0;
- 258   2                      // breath_cycle_cnt = 0;
- 259   2      
- 260   2                      pwm_handle_param.cur_mode = pwm_handle_param.last_mode;
- 261   2              }
- 262   1      
- 263   1              // 实时更新PWM硬件输出
- 264   1              // pwm_handle_param.dest_pwm_0_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_0_dut
-             -y_val);
- 265   1              // pwm_handle_param.dest_pwm_1_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_1_dut
-             -y_val);
- 266   1              set_pwm_channel_0_duty(pwm_handle_param.cur_pwm_0_duty_val);
- 267   1              set_pwm_channel_1_duty(pwm_handle_param.cur_pwm_1_duty_val);
- 268   1      }
- 269          
- 270          void pwm_handle_100us_isr(void)
- 271          {
- 272   1              // 用于控制pwm缓慢变化的时间计数
- 273   1              static volatile u16 pwm_duty_change_cnt = 0;
- 274   1              pwm_duty_change_cnt++;
- 275   1      
- 276   1              switch (pwm_handle_param.cur_mode)
- 277   1              {
- 278   2              // ===========================================================
- 279   2              // PWM_MODE_OFF
- 280   2              // ===========================================================
- 281   2              case PWM_MODE_OFF:
- 282   2                      // TODO 需要确认关机的时候是要马上关闭，还是缓慢关闭
- 283   2                      break;
- 284   2      
- 285   2              // ===========================================================
- 286   2              // PWM_MODE_PWR_ON_ANIM
- 287   2              // ===========================================================
- 288   2              case PWM_MODE_PWR_ON_ANIM:
- 289   2                      //
- 290   2                      break;
+ 250   2                      if (breath_progress >= PWM_BREATH_PROGRESS_MAX)
+ 251   2                      {
+ 252   3                              // 呼吸灯渐亮完成，接下来呼吸渐灭
+ 253   3                              pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_DOWN;
+ 254   3                              breath_step_cnt++;
+ 255   3      
+ 256   3      #if USER_DEBUG_ENABLE
+ 257   3                              P26 = ~P26;
+ 258   3      #endif
+ 259   3                      }
+ 260   2      
+ 261   2                      break;
+ 262   2      
+ 263   2              case PWM_BREATH_ANIM_STA_DOWN:
+ 264   2                      // 呼吸灯渐灭
+ 265   2                      if (breath_progress > 0)
+ 266   2                      {
+ 267   3                              breath_progress--;
+ 268   3      #if USER_DEBUG_ENABLE
+ 269   3                              // printf("breath progress = %u\n", (u16)breath_progress);
+ 270   3      #endif
+ 271   3                      }
+ 272   2      
+ 273   2                      // 根据统一进度，同步计算两路 PWM 的当前占空比
+ 274   2                      pwm_handle_param.cur_pwm_0_duty_val =
+ 275   2                              (u16)((u32)pwm_handle_param.dest_pwm_0_duty_val *
+ 276   2                                        breath_progress / PWM_BREATH_PROGRESS_MAX);
+ 277   2                      pwm_handle_param.cur_pwm_1_duty_val =
+ 278   2                              (u16)((u32)pwm_handle_param.dest_pwm_1_duty_val *
+ 279   2                                        breath_progress / PWM_BREATH_PROGRESS_MAX);
+ 280   2      
+ 281   2                      if (breath_progress == 0)
+ 282   2                      {
+ 283   3                              // 呼吸灯渐灭完成，接下来呼吸渐亮
+ 284   3                              pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_UP;
+ 285   3                              breath_step_cnt++;
+ 286   3      
+ 287   3      #if USER_DEBUG_ENABLE
+ 288   3                              P26 = ~P26;
+ 289   3      #endif
+ 290   3                      }
  291   2      
- 292   2              // ===========================================================
- 293   2              // PWM_MODE_NORMAL_WORK 正常工作模式
- 294   2              // ===========================================================
- 295   2              case PWM_MODE_NORMAL_WORK:
-C51 COMPILER V9.60.7.0   PWM_HANDLE                                                        07/20/2026 17:56:21 PAGE 6   
+ 292   2                      break;
+ 293   2              }
+ 294   1      
+ 295   1              if (breath_step_cnt >= (5 * 2))
+ 296   1              {
+ 297   2                      // 呼吸灯动画执行完 5次 呼吸，退出呼吸灯动画
+C51 COMPILER V9.60.7.0   PWM_HANDLE                                                        07/21/2026 10:57:27 PAGE 6   
 
- 296   2      
- 297   2                      // if (pwm_duty_change_cnt >= 10) // 1000us,1ms
- 298   2                      // if (pwm_duty_change_cnt >= 1) // 100us（用遥控器调节，在50%以上调节pwm占空比的时候
+ 298   2      
+ 299   2                      breath_step_cnt = 0;
+ 300   2      
+ 301   2                      // 可能是从开机缓启动进入的呼吸灯动画，也可能是从正常工作模式进入的呼�
+             -�灯动画
+ 302   2                      pwm_handle_param.cur_mode = pwm_handle_param.last_mode;
+ 303   2      
+ 304   2      #if USER_DEBUG_ENABLE
+ 305   2                      printf("breath finish\n");
+ 306   2                      P26 = ~P26;
+ 307   2      #endif
+ 308   2              }
+ 309   1      
+ 310   1              // 实时更新PWM硬件输出
+ 311   1              // pwm_handle_param.dest_pwm_0_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_0_dut
+             -y_val);
+ 312   1              // pwm_handle_param.dest_pwm_1_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_1_dut
+             -y_val);
+ 313   1              set_pwm_channel_0_duty(pwm_handle_param.cur_pwm_0_duty_val);
+ 314   1              set_pwm_channel_1_duty(pwm_handle_param.cur_pwm_1_duty_val);
+ 315   1      }
+ 316          
+ 317          void pwm_handle_100us_isr(void)
+ 318          {
+ 319   1              // 用于控制pwm缓慢变化的时间计数
+ 320   1              static volatile u16 pwm_duty_change_cnt = 0;
+ 321   1              pwm_duty_change_cnt++;
+ 322   1      
+ 323   1              switch (pwm_handle_param.cur_mode)
+ 324   1              {
+ 325   2              // ===========================================================
+ 326   2              // PWM_MODE_OFF
+ 327   2              // ===========================================================
+ 328   2              case PWM_MODE_OFF:
+ 329   2                      // TODO 需要确认关机的时候是要马上关闭，还是缓慢关闭
+ 330   2                      break;
+ 331   2      
+ 332   2              // ===========================================================
+ 333   2              // PWM_MODE_PWR_ON_ANIM
+ 334   2              // ===========================================================
+ 335   2              case PWM_MODE_PWR_ON_ANIM:
+ 336   2                      //
+ 337   2                      break;
+ 338   2      
+ 339   2              // ===========================================================
+ 340   2              // PWM_MODE_NORMAL_WORK 正常工作模式
+ 341   2              // ===========================================================
+ 342   2              case PWM_MODE_NORMAL_WORK:
+ 343   2      
+ 344   2                      // if (pwm_duty_change_cnt >= 10) // 1000us,1ms
+ 345   2                      // if (pwm_duty_change_cnt >= 1) // 100us（用遥控器调节，在50%以上调节pwm占空比的时候
              -，灯光会有抖动）
- 299   2                      // if (pwm_duty_change_cnt >= 5) // 500us
- 300   2                      // if (pwm_duty_change_cnt >= 10) // x * 100us （用遥控器调节到50%以下pwm占空比的时候，
+ 346   2                      // if (pwm_duty_change_cnt >= 5) // 500us
+ 347   2                      // if (pwm_duty_change_cnt >= 10) // x * 100us （用遥控器调节到50%以下pwm占空比的时候，
              -灯光会有抖动）
- 301   2                      if (pwm_duty_change_cnt >= 20) // x * 100us （ 用遥控器调节时，灯光不会有抖动，样机�
+ 348   2                      if (pwm_duty_change_cnt >= 20) // x * 100us （ 用遥控器调节时，灯光不会有抖动，样机�
              -�高功率为870W--加上风扇）
- 302   2                      // if (pwm_duty_change_cnt >= 30) // x * 100us （用遥控器调节时，灯光不会有抖动，但是
+ 349   2                      // if (pwm_duty_change_cnt >= 30) // x * 100us （用遥控器调节时，灯光不会有抖动，但是
              -调节时间过长，感觉不跟手）
- 303   2                      {
- 304   3                              pwm_duty_change_cnt = 0;
- 305   3                              pwm_handle_in_normal_work();
- 306   3                      }
- 307   2                      break;
- 308   2      
- 309   2              // ===========================================================
- 310   2              // PWM_MODE_BREATH_ANIM
- 311   2              // ===========================================================
- 312   2              case PWM_MODE_BREATH_ANIM:
- 313   2      
- 314   2                      pwm_handle_in_breath_anim();
- 315   2       
- 316   2                      break;
- 317   2      
- 318   2              default:
- 319   2      
- 320   2                      break;
- 321   2              }
- 322   1      }
+ 350   2                      {
+ 351   3                              pwm_duty_change_cnt = 0;
+ 352   3                              pwm_handle_in_normal_work();
+C51 COMPILER V9.60.7.0   PWM_HANDLE                                                        07/21/2026 10:57:27 PAGE 7   
+
+ 353   3                      }
+ 354   2                      break;
+ 355   2      
+ 356   2              // ===========================================================
+ 357   2              // PWM_MODE_BREATH_ANIM
+ 358   2              // ===========================================================
+ 359   2              case PWM_MODE_BREATH_ANIM:
+ 360   2      
+ 361   2                      pwm_handle_in_breath_anim();
+ 362   2      
+ 363   2                      break;
+ 364   2      
+ 365   2              default:
+ 366   2      
+ 367   2                      break;
+ 368   2              }
+ 369   1      }
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    877    ----
-   CONSTANT SIZE    =   ----    ----
-   XDATA SIZE       =     20    ----
+   CODE SIZE        =    972    ----
+   CONSTANT SIZE    =     54    ----
+   XDATA SIZE       =     22    ----
    PDATA SIZE       =   ----    ----
    DATA SIZE        =   ----    ----
    IDATA SIZE       =   ----    ----
