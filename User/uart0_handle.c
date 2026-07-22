@@ -219,11 +219,58 @@ u8 uart_receiver_process_byte(u8 byte)
 
 static void uart_cmd_dev_on_handle(void)
 {
-	if (pwm_handle_param.cur_mode == PWM_MODE_PWR_ON_ANIM)
+	if (pwm_handle_param.cur_mode == PWM_MODE_PWR_ON_ANIM ||
+		pwm_handle_param.cur_mode == PWM_MODE_NORMAL_WORK ||
+		pwm_handle_param.cur_mode == PWM_MODE_BREATH_ANIM ||
+		pwm_handle_param.cur_mode == PWM_MODE_ON)
 	{
-		// 当前处于开机动画模式，不处理
+		/*
+			如果要执行开灯动画，但是目前模式处于以下情况，不处理：
+			1. 当前处于第一次上电的开机缓启动模式
+			2. 当前处于正常工作模式
+			3. 当前处于呼吸灯动画模式
+			4. 当前已经是开灯模式
+		*/
 		return;
 	}
+
+// REVIEW 开灯完成后，需要注意有没有回到 正常工作 模式
+#if (0 == PWM_ON_OR_OFF_IMMEDIATELY_ENABLE)
+	pwm_handle_param.cur_mode = PWM_MODE_ON;
+	pwm_handle_param.cur_mode_sta = PWM_ON_OR_OFF_STA_INIT;
+#else
+
+	// TODO 立即设置PWM占空比
+	pwm_handle_param.cur_mode = PWM_MODE_ON;
+#endif
+}
+
+static void uart_cmd_dev_off_handle(void)
+{
+	if (pwm_handle_param.cur_mode == PWM_MODE_PWR_ON_ANIM ||
+		pwm_handle_param.cur_mode == PWM_MODE_BREATH_ANIM ||
+		pwm_handle_param.cur_mode == PWM_MODE_OFF)
+	{
+		/*
+			如果要执行关灯动画，但是目前模式处于以下情况，不处理：
+			1. 当前处于第一次上电的开机缓启动模式
+			2. 当前处于呼吸灯动画模式
+			3. 当前已经是关灯模式
+		*/
+		return;
+	}
+
+	#if (0 == PWM_ON_OR_OFF_IMMEDIATELY_ENABLE)
+	pwm_handle_param.cur_mode = PWM_MODE_OFF;
+	pwm_handle_param.cur_mode_sta = PWM_ON_OR_OFF_STA_INIT;
+	#else
+
+	// TODO 立即设置PWM占空比
+	pwm_handle_param.cur_mode = PWM_MODE_OFF;
+
+	
+	
+	#endif
 }
 
 static void uart_cmd_pair_handle(void)
@@ -234,7 +281,7 @@ static void uart_cmd_pair_handle(void)
 
 	pwm_handle_param.last_mode = pwm_handle_param.cur_mode;
 	pwm_handle_param.cur_mode = PWM_MODE_BREATH_ANIM;
-	pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_INIT;
+	pwm_handle_param.cur_mode_sta = PWM_BREATH_ANIM_STA_INIT;
 }
 
 static void uart_cmd_cancel_pairing_handle(void)
@@ -245,7 +292,7 @@ static void uart_cmd_cancel_pairing_handle(void)
 
 	pwm_handle_param.last_mode = pwm_handle_param.cur_mode;
 	pwm_handle_param.cur_mode = PWM_MODE_BREATH_ANIM;
-	pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_INIT;
+	pwm_handle_param.cur_mode_sta = PWM_BREATH_ANIM_STA_INIT;
 }
 
 static void uart_cmd_set_color_handle(void)
@@ -517,6 +564,9 @@ void uart_handle(void)
 #if USER_DEBUG_ENABLE
 		printf("recv cmd: dev off\n");
 #endif
+
+		uart_cmd_dev_off_handle();
+
 		break;
 		// ============================================================
 		// ============================================================

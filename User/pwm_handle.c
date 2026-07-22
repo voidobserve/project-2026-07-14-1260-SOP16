@@ -41,6 +41,19 @@ void pwm_mode_set(u8 mode)
 #endif
 
 /**
+ * @brief  根据 pwm_handle_param 中的参数 expect_pwm_x_duty_val ，
+ * 		设置 pwm_handle_param 的 dest_pwm_x_duty_val
+ * 
+ */
+void pwm_handle_param_dest_pwm_val_refresh(void)
+{
+	pwm_handle_param.dest_pwm_0_duty_val = 
+	get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_0_duty_val);
+	pwm_handle_param.dest_pwm_1_duty_val = 
+	get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_1_duty_val);
+}
+
+/**
  * @brief  根据 pwm_handle_param 中的参数 color_idx 和 brightness_lev ，
  * 		设置期望的pwm占空比值
  *
@@ -138,13 +151,86 @@ void pwm_handle_refresh_expect_pwm_duty_val(void)
 	}
 
 	// 根据期望值，得到目标值，再立即当前值设置为目标值，最后立即设置pwm占空比值
-	pwm_handle_param.dest_pwm_0_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_0_duty_val);
-	pwm_handle_param.dest_pwm_1_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_1_duty_val);
+	pwm_handle_param_dest_pwm_val_refresh();
+	// pwm_handle_param.dest_pwm_0_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_0_duty_val);
+	// pwm_handle_param.dest_pwm_1_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_1_duty_val);
 	pwm_handle_param.cur_pwm_0_duty_val = pwm_handle_param.dest_pwm_0_duty_val;
 	pwm_handle_param.cur_pwm_1_duty_val = pwm_handle_param.dest_pwm_1_duty_val;
 	set_pwm_channel_0_duty(pwm_handle_param.cur_pwm_0_duty_val);
 	set_pwm_channel_1_duty(pwm_handle_param.cur_pwm_1_duty_val);
 }
+
+#if (0 == PWM_ON_OR_OFF_IMMEDIATELY_ENABLE)
+static void pwm_handle_in_mode_on_or_off(void)
+{
+	static volatile u16 pwm_progress = 0;
+
+	switch (pwm_handle_param.cur_mode_sta)
+	{
+	case PWM_ON_OR_OFF_STA_INIT:
+		// 初始化呼吸灯动画
+		pwm_handle_param.cur_mode_sta = PWM_ON_OR_OFF_PROCESSING;
+
+		// 根据当前最大的目标值，设置进度
+		if (pwm_handle_param.dest_pwm_0_duty_val >= pwm_handle_param.dest_pwm_1_duty_val)
+		{
+			pwm_progress =
+				(u32)pwm_handle_param.cur_pwm_0_duty_val *
+				PWM_ON_OR_OFF_PROGRESS_MAX /
+				pwm_handle_param.dest_pwm_0_duty_val;
+		}
+		else
+		{
+			pwm_progress =
+				(u32)pwm_handle_param.cur_pwm_1_duty_val *
+				PWM_ON_OR_OFF_PROGRESS_MAX /
+				pwm_handle_param.dest_pwm_1_duty_val;
+		}
+		break;
+
+	case PWM_ON_OR_OFF_PROCESSING:
+
+		if (pwm_handle_param.cur_mode == PWM_MODE_ON)
+		{
+			if (pwm_progress < PWM_ON_OR_OFF_PROGRESS_MAX)
+			{
+				pwm_progress++;
+			}
+		}
+		else // (pwm_handle_param.cur_mode == PWM_MODE_OFF)
+		{
+			if (pwm_progress > 0)
+			{
+				pwm_progress--;
+			}
+		}
+
+		pwm_handle_param.cur_pwm_0_duty_val =
+			(u32)pwm_handle_param.dest_pwm_0_duty_val *
+			pwm_progress /
+			PWM_ON_OR_OFF_PROGRESS_MAX;
+		pwm_handle_param.cur_pwm_1_duty_val =
+			(u32)pwm_handle_param.dest_pwm_1_duty_val *
+			pwm_progress /
+			PWM_ON_OR_OFF_PROGRESS_MAX;
+
+		break;
+
+	default:
+		break;
+	}
+
+	if ((pwm_handle_param.cur_mode == PWM_MODE_ON) &&
+		(pwm_progress >= PWM_ON_OR_OFF_PROGRESS_MAX))
+	{
+		// 开灯动画结束，转到 正常工作模式
+		pwm_handle_param.cur_mode = PWM_MODE_NORMAL_WORK;
+	}
+
+	set_pwm_channel_0_duty(pwm_handle_param.cur_pwm_0_duty_val);
+	set_pwm_channel_1_duty(pwm_handle_param.cur_pwm_1_duty_val);
+}
+#endif
 
 static void pwm_handle_in_normal_work(void)
 {
@@ -178,17 +264,14 @@ static void pwm_handle_in_normal_work(void)
 
 static void pwm_handle_in_breath_anim(void)
 {
-	// static volatile u8 breath_cycle_cnt = 0; // 呼吸灯的周期计数
 	static volatile u8 breath_step_cnt = 0; // 呼吸步骤计数，每完成一次呼吸会加2
 	/*
 		呼吸灯的进度，
 		范围：0 ~ PWM_BREATH_PROGRESS_MAX ，映射到pwm占空比值的 0 ~ 100%
 	*/
 	static volatile u16 breath_progress = 0;
-	// 呼吸灯的进度最大值，根据当前最大的 dest_pwm_x_duty_val 计算得到
-	// static volatile u16 breath_progress_max = 0;
 
-	switch (pwm_handle_param.breath_anim_sta)
+	switch (pwm_handle_param.cur_mode_sta)
 	{
 	case PWM_BREATH_ANIM_STA_INIT:
 		// 刚进入呼吸灯动画
@@ -198,20 +281,20 @@ static void pwm_handle_in_breath_anim(void)
 		// 判断当前是否已经点亮，如果已经点亮，则从中间打断进入呼吸灯动画
 		if (pwm_handle_param.cur_pwm_0_duty_val || pwm_handle_param.cur_pwm_1_duty_val)
 		{
-			pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_DOWN;
+			pwm_handle_param.cur_mode_sta = PWM_BREATH_ANIM_STA_DOWN;
 
 			// 根据当前最大的目标值，得到当前呼吸的进度
 			if (pwm_handle_param.dest_pwm_0_duty_val >= pwm_handle_param.dest_pwm_1_duty_val)
 			{
 				breath_progress =
-					pwm_handle_param.cur_pwm_0_duty_val *
+					(u32)pwm_handle_param.cur_pwm_0_duty_val *
 					PWM_BREATH_PROGRESS_MAX /
 					pwm_handle_param.dest_pwm_0_duty_val;
 			}
 			else
 			{
 				breath_progress =
-					pwm_handle_param.cur_pwm_1_duty_val *
+					(u32)pwm_handle_param.cur_pwm_1_duty_val *
 					PWM_BREATH_PROGRESS_MAX /
 					pwm_handle_param.dest_pwm_1_duty_val;
 			}
@@ -219,7 +302,7 @@ static void pwm_handle_in_breath_anim(void)
 		else
 		{
 			// 当前灯光是关闭的，接下来呼吸渐亮
-			pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_UP;
+			pwm_handle_param.cur_mode_sta = PWM_BREATH_ANIM_STA_UP;
 		}
 
 #if USER_DEBUG_ENABLE
@@ -250,7 +333,7 @@ static void pwm_handle_in_breath_anim(void)
 		if (breath_progress >= PWM_BREATH_PROGRESS_MAX)
 		{
 			// 呼吸灯渐亮完成，接下来呼吸渐灭
-			pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_DOWN;
+			pwm_handle_param.cur_mode_sta = PWM_BREATH_ANIM_STA_DOWN;
 			breath_step_cnt++;
 
 #if USER_DEBUG_ENABLE
@@ -281,7 +364,7 @@ static void pwm_handle_in_breath_anim(void)
 		if (breath_progress == 0)
 		{
 			// 呼吸灯渐灭完成，接下来呼吸渐亮
-			pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_UP;
+			pwm_handle_param.cur_mode_sta = PWM_BREATH_ANIM_STA_UP;
 			breath_step_cnt++;
 
 #if USER_DEBUG_ENABLE
@@ -326,14 +409,26 @@ void pwm_handle_100us_isr(void)
 	// PWM_MODE_OFF
 	// ===========================================================
 	case PWM_MODE_OFF:
-		// TODO 需要确认关机的时候是要马上关闭，还是缓慢关闭
+
+#if (0 == PWM_ON_OR_OFF_IMMEDIATELY_ENABLE)
+		pwm_handle_in_mode_on_or_off();
+#endif
+		break;
+
+	// ===========================================================
+	// PWM_MODE_ON
+	// ===========================================================
+	case PWM_MODE_ON:
+#if (0 == PWM_ON_OR_OFF_IMMEDIATELY_ENABLE)
+		pwm_handle_in_mode_on_or_off();
+#endif
 		break;
 
 	// ===========================================================
 	// PWM_MODE_PWR_ON_ANIM
 	// ===========================================================
 	case PWM_MODE_PWR_ON_ANIM:
-		//
+		// 第一次上电对应的开机动画，由主循环处理
 		break;
 
 	// ===========================================================
