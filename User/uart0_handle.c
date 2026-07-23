@@ -2,6 +2,7 @@
 #include "user_config.h"
 
 #include "uart0.h"
+#include "pwm.h"
 #include "pwm_handle.h"
 
 // 接收器
@@ -219,6 +220,7 @@ u8 uart_receiver_process_byte(u8 byte)
 
 static void uart_cmd_dev_on_handle(void)
 {
+#if 0
 	if (pwm_handle_param.cur_mode == PWM_MODE_PWR_ON_ANIM ||
 		pwm_handle_param.cur_mode == PWM_MODE_NORMAL_WORK ||
 		pwm_handle_param.cur_mode == PWM_MODE_BREATH_ANIM ||
@@ -226,51 +228,81 @@ static void uart_cmd_dev_on_handle(void)
 	{
 		/*
 			如果要执行开灯动画，但是目前模式处于以下情况，不处理：
-			1. 当前处于第一次上电的开机缓启动模式
+			1. 当前处于上电的开机缓启动模式
 			2. 当前处于正常工作模式
 			3. 当前处于呼吸灯动画模式
 			4. 当前已经是开灯模式
 		*/
 		return;
 	}
+#else
+	if (pwm_handle_param.cur_mode == PWM_MODE_PWR_ON_ANIM ||
+		pwm_handle_param.cur_mode == PWM_MODE_NORMAL_WORK ||
+		pwm_handle_param.cur_mode == PWM_MODE_ON)
+	{
+		/*
+			如果要执行开灯动画，但是目前模式处于以下情况，不处理：
+			1. 当前处于上电的开机缓启动模式
+			2. 当前处于正常工作模式
+			3. 当前已经是开灯模式
+		*/
+		return;
+	}
+#endif
 
 // REVIEW 开灯完成后，需要注意有没有回到 正常工作 模式
 #if (0 == PWM_ON_OR_OFF_IMMEDIATELY_ENABLE)
 	pwm_handle_param.cur_mode = PWM_MODE_ON;
 	pwm_handle_param.cur_mode_sta = PWM_ON_OR_OFF_STA_INIT;
 #else
-
-	// TODO 立即设置PWM占空比
-	pwm_handle_param.cur_mode = PWM_MODE_ON;
+	// 立即转到正常工作模式
+	pwm_handle_param.cur_mode = PWM_MODE_NORMAL_WORK;
+	pwm_handle_param.cur_pwm_0_duty_val = pwm_handle_param.dest_pwm_0_duty_val;
+	pwm_handle_param.cur_pwm_1_duty_val = pwm_handle_param.dest_pwm_1_duty_val;
+	set_pwm_channel_0_duty(pwm_handle_param.cur_pwm_0_duty_val);
+	set_pwm_channel_1_duty(pwm_handle_param.cur_pwm_1_duty_val);
 #endif
 }
 
 static void uart_cmd_dev_off_handle(void)
 {
+#if 0
 	if (pwm_handle_param.cur_mode == PWM_MODE_PWR_ON_ANIM ||
 		pwm_handle_param.cur_mode == PWM_MODE_BREATH_ANIM ||
 		pwm_handle_param.cur_mode == PWM_MODE_OFF)
 	{
 		/*
 			如果要执行关灯动画，但是目前模式处于以下情况，不处理：
-			1. 当前处于第一次上电的开机缓启动模式
+			1. 当前处于上电的开机缓启动模式
 			2. 当前处于呼吸灯动画模式
 			3. 当前已经是关灯模式
 		*/
 		return;
 	}
+#else
+	if (pwm_handle_param.cur_mode == PWM_MODE_PWR_ON_ANIM ||
+		pwm_handle_param.cur_mode == PWM_MODE_OFF)
+	{
+		/*
+			如果要执行关灯动画，但是目前模式处于以下情况，不处理：
+			1. 当前处于上电的开机缓启动模式
+			2. 当前已经是关灯模式
+		*/
+		return;
+	}
+#endif
 
-	#if (0 == PWM_ON_OR_OFF_IMMEDIATELY_ENABLE)
+#if (0 == PWM_ON_OR_OFF_IMMEDIATELY_ENABLE)
 	pwm_handle_param.cur_mode = PWM_MODE_OFF;
 	pwm_handle_param.cur_mode_sta = PWM_ON_OR_OFF_STA_INIT;
-	#else
-
-	// TODO 立即设置PWM占空比
+#else
+	// 立即转到关灯模式，防止定时器调用了调节函数，又调节了pwm占空比
 	pwm_handle_param.cur_mode = PWM_MODE_OFF;
-
-	
-	
-	#endif
+	pwm_handle_param.cur_pwm_0_duty_val = 0;
+	pwm_handle_param.cur_pwm_1_duty_val = 0;
+	set_pwm_channel_0_duty(pwm_handle_param.cur_pwm_0_duty_val);
+	set_pwm_channel_1_duty(pwm_handle_param.cur_pwm_1_duty_val);
+#endif
 }
 
 static void uart_cmd_pair_handle(void)
@@ -279,6 +311,7 @@ static void uart_cmd_pair_handle(void)
 	printf("func : uart_cmd_pair_handle\n");
 #endif
 
+	// 保存当前模式，用于呼吸完成后回到当前模式
 	pwm_handle_param.last_mode = pwm_handle_param.cur_mode;
 	pwm_handle_param.cur_mode = PWM_MODE_BREATH_ANIM;
 	pwm_handle_param.cur_mode_sta = PWM_BREATH_ANIM_STA_INIT;
@@ -290,6 +323,7 @@ static void uart_cmd_cancel_pairing_handle(void)
 	printf("func : uart_cmd_cancel_pairing_handle\n");
 #endif
 
+	// 保存当前模式，用于呼吸完成后回到当前模式
 	pwm_handle_param.last_mode = pwm_handle_param.cur_mode;
 	pwm_handle_param.cur_mode = PWM_MODE_BREATH_ANIM;
 	pwm_handle_param.cur_mode_sta = PWM_BREATH_ANIM_STA_INIT;
@@ -302,20 +336,41 @@ static void uart_cmd_set_color_handle(void)
 	printf("func : uart_cmd_set_color_handle\n");
 #endif
 
+#if 0
+	if (pwm_handle_param.cur_mode != PWM_MODE_NORMAL_WORK ||
+		uart_receiver.recv_len < 11)
+	{
+		/*
+			1. 当前不处于 正常工作 模式，不处理
+			2. 接收到的数据长度不足，不处理
+		*/
+#if USER_DEBUG_ENABLE
+		// printf("uart_receiver.recv_len == %u\n", (u16)uart_receiver.recv_len);
+		// printf("err\n");
+#endif
+		return;
+	}
+
+	// TODO 还不确定要不要立即切换 模式，以及PWM的调节会不会受到影响
+#else
+	// 如果需要呼吸、关灯时也能立即设置颜色
 	if (pwm_handle_param.cur_mode == PWM_MODE_PWR_ON_ANIM ||
 		uart_receiver.recv_len < 11)
 	{
 		/*
-			1. 当前处于开机动画模式，不处理
+			1. 当前处于 上电的开机缓启动 模式，不处理
 			2. 接收到的数据长度不足，不处理
 		*/
 #if USER_DEBUG_ENABLE
-		// printf("func : uart_cmd_set_color_handle\n");
-		printf("uart_receiver.recv_len == %u\n", (u16)uart_receiver.recv_len);
-		printf("err\n");
+		// printf("uart_receiver.recv_len == %u\n", (u16)uart_receiver.recv_len);
+		// printf("err\n");
 #endif
 		return;
 	}
+
+	// 设置亮度，立即将当前模式设置为 正常工作模式
+	pwm_handle_param.cur_mode = PWM_MODE_NORMAL_WORK;
+#endif
 
 	if (uart_receiver.buffer[8] == 0xD3 &&
 		uart_receiver.buffer[9] == 0x42)
@@ -384,7 +439,7 @@ static void uart_cmd_set_color_handle(void)
 #endif
 	}
 
-	pwm_handle_refresh_expect_pwm_duty_val();
+	pwm_handle_update_expect_pwm_val();
 }
 
 void uart_cmd_set_brightness_lev_handle(void)
@@ -393,19 +448,41 @@ void uart_cmd_set_brightness_lev_handle(void)
 	printf("func : uart_cmd_set_brightness_lev_handle\n");
 #endif
 
+#if 0
+	if (pwm_handle_param.cur_mode != PWM_MODE_NORMAL_WORK ||
+		uart_receiver.recv_len < 10)
+	{
+		/*
+			1. 当前不处于 正常工作模式，不处理
+			2. 接收到的数据长度不足，不处理
+		*/
+#if USER_DEBUG_ENABLE
+		// printf("uart_receiver.recv_len == %u\n", (u16)uart_receiver.recv_len);
+		// printf("err\n");
+#endif
+		return;
+	}
+
+	// TODO 还不确定要不要立即切换 模式，以及PWM的调节会不会受到影响
+#else
+	// 如果需要呼吸、关灯时也能立即设置亮度
 	if (pwm_handle_param.cur_mode == PWM_MODE_PWR_ON_ANIM ||
 		uart_receiver.recv_len < 10)
 	{
 		/*
-			1. 当前处于开机动画模式，不处理
+			1. 当前处于 上电的开机缓启动 ，不处理
 			2. 接收到的数据长度不足，不处理
 		*/
 #if USER_DEBUG_ENABLE
-		printf("uart_receiver.recv_len == %u\n", (u16)uart_receiver.recv_len);
-		printf("err\n");
+		// printf("uart_receiver.recv_len == %u\n", (u16)uart_receiver.recv_len);
+		// printf("err\n");
 #endif
 		return;
 	}
+
+	// 设置亮度，立即将当前模式设置为 正常工作模式
+	pwm_handle_param.cur_mode = PWM_MODE_NORMAL_WORK;
+#endif
 
 	if (uart_receiver.buffer[7] == 0x05)
 	{
@@ -456,7 +533,7 @@ void uart_cmd_set_brightness_lev_handle(void)
 		pwm_handle_param.brightness_lev = PWM_BRIGHTNESS_LEV_MAX;
 	}
 
-	pwm_handle_refresh_expect_pwm_duty_val();
+	pwm_handle_update_expect_pwm_val();
 }
 
 void uart_handle(void)

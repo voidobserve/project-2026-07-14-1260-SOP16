@@ -7,6 +7,10 @@
 
 volatile bit flag_time_comes_during_power_on = 0; // 标志位，开机缓启动期间，调节时间到来（由定时器置位）
 
+/**
+ * @brief 上电后的开机动画处理函数
+ * 
+ */
 void power_on_handle(void)
 {
     static volatile u32 pwm0_power_on_step = 0;
@@ -60,9 +64,9 @@ void power_on_handle(void)
         set_pwm_channel_0_duty(pwm_handle_param.cur_pwm_0_duty_val);
         set_pwm_channel_1_duty(pwm_handle_param.cur_pwm_1_duty_val);
 
-        // TODO 如果开机期间，需要转到呼吸模式
-        // TODO 开机缓启动期间，只处理 配对 和 取消配对 这两种情况
-        // TODO 如果从呼吸动画退出，到了缓启动期间， cur_pwm_x_duty_val 的值应该是确定值
+        // 如果开机期间，需要转到呼吸模式
+        // 开机缓启动期间，只处理 配对 和 取消配对 这两种情况
+        // 如果从呼吸动画退出，到了缓启动期间， cur_pwm_x_duty_val 的值应该是确定值
         uart_handle();
     }
 

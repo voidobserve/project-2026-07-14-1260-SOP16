@@ -86,6 +86,7 @@ void pwm_init(void);
 // 电源电压低于170V-AC,启动低压保护，电源电压高于170V-AC，关闭低压保护
 void according_pin9_to_adjust_pwm(void);
 
+#if 0
 extern u8 get_pwm_channel_0_status(void); // 获取第一路PWM的运行状态
 extern u8 get_pwm_channel_1_status(void); // 获取第二路PWM的运行状态
 
@@ -94,6 +95,7 @@ extern void pwm_channel_0_disable(void);
 
 extern void pwm_channel_1_enable(void);
 extern void pwm_channel_1_disable(void);
+#endif
 
 void set_pwm_channel_0_duty(u16 channel_duty);
 void set_pwm_channel_1_duty(u16 channel_duty);

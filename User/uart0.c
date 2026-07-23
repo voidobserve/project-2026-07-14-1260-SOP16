@@ -47,9 +47,14 @@ void uart0_config(void)
                  UART_RX_IRQ_EN(0x01) |
                  UART_EN(0x1); // 8bit数据，1bit停止位
 
-    // __SetIRQnIP(UART0_IRQn, 1); // 设置中断优先级，数值越大，优先级越高
-    __EnableIRQ(UART0_IRQn);    // 打开模块中断
-    IE_EA = 1;                  // 打开总中断
+    /*
+        REVIRW 如果不设置为最高优先级，
+        会被定时器中断占用，导致一帧数据接收失败，
+        特别是在呼吸模式时，呼吸调节的时间会占用 100% 的中断周期
+    */
+    __SetIRQnIP(UART0_IRQn, 1); // 设置中断优先级，数值越大，优先级越高
+    __EnableIRQ(UART0_IRQn); // 打开模块中断
+    IE_EA = 1;               // 打开总中断
 }
 
 // 获取接收缓冲区中有效的数据个数，单位：字节Byte

@@ -1,77 +1,41 @@
-```C
-static void pwm_handle_in_breath_anim(void)
-{
-    static volatile u8 breath_step_cnt = 0;
-    // 新增：统一的渐变进度，0~100 代表 0%~100%
-    static volatile u8 breath_progress = 0; 
+| 引脚编号 | 引脚     | 功能                                         | 说明 |
+| -------- | -------- | -------------------------------------------- | ---- |
+| 1        | P13      | 检测风扇工作状态是否异常                     |      |
+| 2        | P12      | 控制风扇开关                                 |      |
+| 3        | P11      | NC                                           |      |
+| 4        | P00      | DEBUG 打印引脚（测试时使用）                 |      |
+| 5        | P02      | NC                                           |      |
+| 6        | P03      | NC（暂定为串口信号接收脚，连接2.4G接收模块） |      |
+| 7        | P31  HCK | 检测旋钮调光（线控调光）                     |      |
+| 8        | P30      | 检测热敏电阻一侧的电压 温度检测引脚          |      |
+| 9        | P27      | 检测发动机是否稳定                           |      |
+| 10       | P21      | NC                                           |      |
+| 11       | P17 HDA  | NC                                           |      |
+| 12       | VSS      |                                              |      |
+| 13       | VCC      |                                              |      |
+| 14       | P16      | PWM输出，控制一路灯光（PWM1，蓝光）          |      |
+| 15       | P15      | PWM输出，控制一路灯光（PWM2，绿光）          |      |
+| 16       | P14      | 目前固定输出低电平                           |      |
 
-    switch (pwm_handle_param.breath_anim_sta)
-    {
-    case PWM_BREATH_ANIM_STA_INIT:
-        breath_step_cnt = 0;
-        breath_progress = 0; // 初始化进度为0
+特殊情况：
+- 开机缓启动时，只处理配对和取消配对按键事件
+- 关灯时，按下设置颜色和亮度按键，也会进行处理
+- 在呼吸时，如果按下了其他按键，例如设置颜色和亮度，会立即退出呼吸，直接处理按键事件
+- 目前开灯和关灯都是立即设置，没有缓慢调节
 
-        if (pwm_handle_param.cur_pwm_0_duty_val || pwm_handle_param.cur_pwm_1_duty_val)
-        {
-            // 当前有亮度，说明是从中间打断进入的，计算当前进度
-            // 防止除0，需确保dest不为0
-            if (pwm_handle_param.dest_pwm_0_duty_val > 0) {
-                breath_progress = (u32)pwm_handle_param.cur_pwm_0_duty_val * 100 / pwm_handle_param.dest_pwm_0_duty_val;
-            }
-            pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_DOWN;
-        }
-        else
-        {
-            pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_UP;
-        }
-        break;
+部分功能描述：
+- 风扇检测脚（1脚）：
+  - 检测到高于4.5V的电压时，14、15脚正常输出
+  - 检测到低于4.3V的电压时，14、15脚输出25%占空比
 
-    case PWM_BREATH_ANIM_STA_UP:
-        // 统一步调：进度 +1
-        if (breath_progress < 100) {
-            breath_progress++;
-        }
+- 风扇控制脚（2脚）：
 
-        // 根据统一进度，同步计算两路 PWM 的当前占空比
-        pwm_handle_param.cur_pwm_0_duty_val = (u32)pwm_handle_param.dest_pwm_0_duty_val * breath_progress / 100;
-        pwm_handle_param.cur_pwm_1_duty_val = (u32)pwm_handle_param.dest_pwm_1_duty_val * breath_progress / 100;
+  > 现在2脚一直输出低电平，表示打开风扇
+  >
+  >  
+  >
+  > 由于线控调光功能已经屏蔽，风扇控制脚不会因为PWM占空比降低到5%以下时就去关闭风扇
 
-        if (breath_progress >= 100)
-        {
-            // 渐亮完成，切换到渐灭
-            pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_DOWN;
-            breath_step_cnt++;
-        }
-        break;
+- 旋钮调光（线控调光，7脚）：
 
-    case PWM_BREATH_ANIM_STA_DOWN:
-        // 统一步调：进度 -1
-        if (breath_progress > 0) {
-            breath_progress--;
-        }
-
-        // 根据统一进度，同步计算两路 PWM 的当前占空比
-        pwm_handle_param.cur_pwm_0_duty_val = (u32)pwm_handle_param.dest_pwm_0_duty_val * breath_progress / 100;
-        pwm_handle_param.cur_pwm_1_duty_val = (u32)pwm_handle_param.dest_pwm_1_duty_val * breath_progress / 100;
-
-        if (breath_progress == 0)
-        {
-            // 渐灭完成，切换到渐亮
-            pwm_handle_param.breath_anim_sta = PWM_BREATH_ANIM_STA_UP;
-            breath_step_cnt++;
-        }
-        break;
-    }
-
-    if (breath_step_cnt >= (5 * 2))
-    {
-        breath_step_cnt = 0;
-        breath_progress = 0;
-        pwm_handle_param.cur_mode = pwm_handle_param.last_mode;
-    }
-
-    // 同步更新硬件输出
-    set_pwm_channel_0_duty(pwm_handle_param.cur_pwm_0_duty_val);
-    set_pwm_channel_1_duty(pwm_handle_param.cur_pwm_1_duty_val);
-}
-```
+  > 单片机已经屏蔽这功能

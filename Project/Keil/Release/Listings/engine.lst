@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.7.0   ENGINE                                                            07/22/2026 16:29:13 PAGE 1   
+C51 COMPILER V9.60.7.0   ENGINE                                                            07/23/2026 15:42:04 PAGE 1   
 
 
 C51 COMPILER V9.60.7.0, COMPILATION OF MODULE ENGINE
@@ -62,7 +62,7 @@ line level    source
   45   1          {
   46   2              u16 i = 0;
   47   2              for (; i < ARRAY_SIZE(filter_buff); i++)
-C51 COMPILER V9.60.7.0   ENGINE                                                            07/22/2026 16:29:13 PAGE 2   
+C51 COMPILER V9.60.7.0   ENGINE                                                            07/23/2026 15:42:04 PAGE 2   
 
   48   2              {
   49   3                  filter_buff[i] = adc_val;
@@ -126,7 +126,7 @@ line level    source
  107   3                  else
  108   3                  {
  109   4                      if (over_drive_status)
-C51 COMPILER V9.60.7.0   ENGINE                                                            07/22/2026 16:29:13 PAGE 3   
+C51 COMPILER V9.60.7.0   ENGINE                                                            07/23/2026 15:42:04 PAGE 3   
 
  110   4                          over_drive_status--;
  111   4                  }
@@ -190,7 +190,7 @@ line level    source
  164   2              // 锁定最大的占空比为50%，并且给相应标志位置一
  165   2              if (flag_is_pwm_sub_time_comes) // pwm占空比递减时间到来
  166   2              {
-C51 COMPILER V9.60.7.0   ENGINE                                                            07/22/2026 16:29:13 PAGE 4   
+C51 COMPILER V9.60.7.0   ENGINE                                                            07/23/2026 15:42:04 PAGE 4   
 
  167   3                  flag_is_pwm_sub_time_comes = 0;
  168   3      

@@ -1,1 +1,0 @@
-"..\..\User\uart0_handle.c" LARGE OPTIMIZE (9,SPEED) BROWSE INTVECTOR(0x000C) INCDIR(..\..\Libraries\Include;..\..\User) interval(3) DEBUG OBJECTEXTEND PRINT(.\Release\Listings\uart0_handle.lst) OBJECT(.\Release\Objects\uart0_handle.obj)

@@ -76,6 +76,8 @@ void set_pwm_channel_1_duty(u16 channel_duty)
 }
  
 
+#if 0
+
 /**
  * @brief 获取第一路PWM的运行状态
  *
@@ -151,6 +153,7 @@ void pwm_channel_1_disable(void)
     // 直接输出0%的占空比，可能会有些跳动，需要将对应的引脚配置回输出模式
     STMR_PWMEN &= ~(0x01 << 1); // 不使能PWM1的输出
 }
+#endif
 
 /**
  * @brief 根据传参，加上线控调光的限制、温度过热限制、风扇工作异常限制，

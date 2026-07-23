@@ -41,16 +41,16 @@ void pwm_mode_set(u8 mode)
 #endif
 
 /**
- * @brief  根据 pwm_handle_param 中的参数 expect_pwm_x_duty_val ，
+ * @brief  根据 pwm_handle_param 中的参数 expect_pwm_x_duty_val ，以及部分限制条件，
  * 		设置 pwm_handle_param 的 dest_pwm_x_duty_val
- * 
+ *
  */
-void pwm_handle_param_dest_pwm_val_refresh(void)
+void pwm_handle_update_dest_pwm_val(void)
 {
-	pwm_handle_param.dest_pwm_0_duty_val = 
-	get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_0_duty_val);
-	pwm_handle_param.dest_pwm_1_duty_val = 
-	get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_1_duty_val);
+	pwm_handle_param.dest_pwm_0_duty_val =
+		get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_0_duty_val);
+	pwm_handle_param.dest_pwm_1_duty_val =
+		get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_1_duty_val);
 }
 
 /**
@@ -59,7 +59,7 @@ void pwm_handle_param_dest_pwm_val_refresh(void)
  *
  * @details 根据颜色索引（ color_idx ）和亮度级别（ brightness_lev ）设置PWM占空比
  */
-void pwm_handle_refresh_expect_pwm_duty_val(void)
+void pwm_handle_update_expect_pwm_val(void)
 {
 	switch (pwm_handle_param.color_idx)
 	{
@@ -151,7 +151,7 @@ void pwm_handle_refresh_expect_pwm_duty_val(void)
 	}
 
 	// 根据期望值，得到目标值，再立即当前值设置为目标值，最后立即设置pwm占空比值
-	pwm_handle_param_dest_pwm_val_refresh();
+	pwm_handle_update_dest_pwm_val();
 	// pwm_handle_param.dest_pwm_0_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_0_duty_val);
 	// pwm_handle_param.dest_pwm_1_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_1_duty_val);
 	pwm_handle_param.cur_pwm_0_duty_val = pwm_handle_param.dest_pwm_0_duty_val;
@@ -267,9 +267,18 @@ static void pwm_handle_in_breath_anim(void)
 	static volatile u8 breath_step_cnt = 0; // 呼吸步骤计数，每完成一次呼吸会加2
 	/*
 		呼吸灯的进度，
-		范围：0 ~ PWM_BREATH_PROGRESS_MAX ，映射到pwm占空比值的 0 ~ 100%
+		范围：0 ~ PWM_BREATH_PROGRESS_MAX ，映射到 dest_pwm_x_duty_val 占空比值的 0 ~ 100%
 	*/
 	static volatile u16 breath_progress = 0;
+
+	static volatile u8 call_dly_cnt = 0;
+
+	call_dly_cnt++;
+	if (call_dly_cnt < 10)
+	{
+		return;
+	}
+	call_dly_cnt = 0;
 
 	switch (pwm_handle_param.cur_mode_sta)
 	{
@@ -308,7 +317,7 @@ static void pwm_handle_in_breath_anim(void)
 #if USER_DEBUG_ENABLE
 		printf("breath sta init\n");
 		printf("breath progress = %u\n", (u16)breath_progress);
-		P26 = ~P26;
+		// P26 = ~P26;
 #endif
 		break;
 
@@ -337,7 +346,7 @@ static void pwm_handle_in_breath_anim(void)
 			breath_step_cnt++;
 
 #if USER_DEBUG_ENABLE
-			P26 = ~P26;
+			// P26 = ~P26;
 #endif
 		}
 
@@ -368,7 +377,7 @@ static void pwm_handle_in_breath_anim(void)
 			breath_step_cnt++;
 
 #if USER_DEBUG_ENABLE
-			P26 = ~P26;
+			// P26 = ~P26;
 #endif
 		}
 
@@ -386,7 +395,7 @@ static void pwm_handle_in_breath_anim(void)
 
 #if USER_DEBUG_ENABLE
 		printf("breath finish\n");
-		P26 = ~P26;
+		// P26 = ~P26;
 #endif
 	}
 
@@ -428,7 +437,7 @@ void pwm_handle_100us_isr(void)
 	// PWM_MODE_PWR_ON_ANIM
 	// ===========================================================
 	case PWM_MODE_PWR_ON_ANIM:
-		// 第一次上电对应的开机动画，由主循环处理
+		// 上电对应的开机动画，由主循环处理
 		break;
 
 	// ===========================================================
@@ -453,7 +462,9 @@ void pwm_handle_100us_isr(void)
 	// ===========================================================
 	case PWM_MODE_BREATH_ANIM:
 
-		pwm_handle_in_breath_anim();
+		P26 = 1;					 // TEST_ONLY
+		pwm_handle_in_breath_anim(); // 函数内每次调节刚好会超过100us
+		P26 = 0;					 // TEST_ONLY
 
 		break;
 

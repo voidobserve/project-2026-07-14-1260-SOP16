@@ -75,21 +75,21 @@ void main(void)
     limited_pwm_duty_due_to_temp = MAX_PWM_DUTY;
     limited_pwm_duty_due_to_unstable_engine = MAX_PWM_DUTY;
 
-    // pwm_handle_param_init();
-    // pwm_mode = PWM_MODE_COLOR_CYAN;                 // 开机缓启动之后，默认的模式
-    // pwm_brightness_lev = PWM_MODE_BRIGHTNESS_LEV_6; // REVIEW 要注意是最大亮度
-    power_on_handle(); // TEST_ONLY 在测试时屏蔽
+    power_on_handle(); 
 
     while (1)
     {
 #if 1
-        // temperature_scan(); // 检测热敏电阻一端的电压值
-        // fan_scan();         // 检测风扇的状态是否异常，并根据结果来限制pwm占空比
-        // set_duty();         // 设定到要调节到的脉宽 (设置adjust_duty)
+
+        // TODO 测试时屏蔽，实际使用时要恢复
+        temperature_scan(); // 检测热敏电阻一端的电压值
+        fan_scan();         // 检测风扇的状态是否异常，并根据结果来限制pwm占空比
+        set_duty();         // 设定到要调节到的脉宽 (设置adjust_duty)
 
         // 如果 expect_adjust_pwm_channel_x_duty 有变化，可以在这里修改 adjust_pwm_channel_x_duty
-        pwm_handle_param.dest_pwm_0_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_0_duty_val);
-        pwm_handle_param.dest_pwm_1_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_1_duty_val);
+        // pwm_handle_param.dest_pwm_0_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_0_duty_val);
+        // pwm_handle_param.dest_pwm_1_duty_val = get_pwm_channel_x_adjust_duty(pwm_handle_param.expect_pwm_1_duty_val);
+        pwm_handle_update_dest_pwm_val();
 
         uart_handle(); // 处理串口接收到的数据
 
